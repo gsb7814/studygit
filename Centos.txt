@@ -5,7 +5,8 @@ redhat
 10.204.16.59/56
 root/123qwe
 jk/7890uiop
-59Ԥ�㡢56����
+59预算、56报账
+将字符编码从ansi修改为utf8
 
 10.204.16.57
 10.204.16.58
@@ -16,7 +17,7 @@ passwd bob
 mkdir /usr/bob
 chown bob:bob /usr/bob
 
-�鿴�ڴ棺cat /proc/meminfo | grep MemTotal
+查看内存：cat /proc/meminfo | grep MemTotal
 
 
 java version "1.6.0_22"
