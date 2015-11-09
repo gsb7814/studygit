@@ -33,5 +33,7 @@ Redhat Linux Server release 6.2
 [root@localhost bob]# useradd -d /var/ftp/test -g ftp -s /sbin/nologin ftptest
 [root@localhost bob]# passwd ftptest
 
+学习git
+2015年11月9日修改
 
 ftp: connect: No route to host
