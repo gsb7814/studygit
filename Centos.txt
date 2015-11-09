@@ -42,6 +42,11 @@ git status
 git log
 git log --pretty=oneline
 git reflog
+
+git reset --hard HEAD^
+git reset --hard HEAD~3
+git reset --hard commitidxxx
+
 git checkout --Centos.txt
 git reset HEAD Centos.txt
 git rm filename
