@@ -34,6 +34,19 @@ Redhat Linux Server release 6.2
 [root@localhost bob]# passwd ftptest
 
 学习git
+git init
+
+git add Centos.txt
+git commit -m "add centos files"
+git status
+git log
+git log --pretty=oneline
+git reflog
+git checkout --Centos.txt
+git reset HEAD Centos.txt
+git rm filename
+
+
 2015年11月9日修改
 
 ftp: connect: No route to host
