@@ -1,0 +1,76 @@
+redhat
+10.204.16.59/56
+
+59预算、56报账
+将字符编码从ansi修改为utf8
+
+10.204.16.57
+10.204.16.58
+10.204.16.59
+bob/gsb7814
+useradd bob
+passwd bob
+mkdir /usr/bob
+chown bob:bob /usr/bob
+
+查看内存：cat /proc/meminfo | grep MemTotal
+
+
+java version "1.6.0_22"
+OpenJDK Runtime Environment (IcedTea6 1.10.4) (rhel-1.41.1.10.4.el6-x86_64)
+OpenJDK 64-Bit Server VM (build 20.0-b11, mixed mode)
+
+Package vsftpd-2.2.2-6.el6_0.1.x86_64 already installed and latest version
+
+Redhat Linux Server release 6.2
+
+
+[root@localhost bob]# vim /etc/vsftpd/vsftpd.conf
+[root@localhost bob]# useradd -d /var/ftp/test -g ftp -s /sbin/nologin ftptest
+[root@localhost bob]# passwd ftptest
+
+学习git
+git init
+
+git add Centos.txt
+git commit -m "add centos files"
+git status
+git log
+git log --pretty=oneline
+git reflog
+
+git reset --hard HEAD^
+git reset --hard HEAD~3
+git reset --hard commitidxxx
+
+git checkout -- Centos.txt
+git reset HEAD Centos.txt
+git rm filename
+
+git diff
+git diff HEAD -- Centos.txt
+
+2015年11月9日修改
+---------------------------------------------------------------------------------
+https://github.com/gsb7814/studygit
+https://github.com/gsb7814/studygit.git
+
+ We recommend every repository include a README, LICENSE, and .gitignore.
+
+ …or create a new repository on the command line
+
+echo # studygit >> README.md
+git init
+git add README.md
+git commit -m "first commit"
+git remote add origin https://github.com/gsb7814/studygit.git
+git push -u origin master
+
+…or push an existing repository from the command line
+
+git remote add origin https://github.com/gsb7814/studygit.git
+git push -u origin master
+
+…or import code from another repository
+
+You can initialize this repository with code from a Subversion, Mercurial, or TFS project.
