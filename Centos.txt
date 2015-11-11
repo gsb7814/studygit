@@ -47,10 +47,12 @@ git reset --hard HEAD^
 git reset --hard HEAD~3
 git reset --hard commitidxxx
 
-git checkout --Centos.txt
+git checkout -- Centos.txt
 git reset HEAD Centos.txt
 git rm filename
 
+git diff
+git diff HEAD -- Centos.txt
 
 2015年11月9日修改
 
