@@ -1,17 +1,4 @@
 redhat
-10.204.16.59/56
-
-59预算、56报账
-将字符编码从ansi修改为utf8
-
-10.204.16.57
-10.204.16.58
-10.204.16.59
-bob/gsb7814
-useradd bob
-passwd bob
-mkdir /usr/bob
-chown bob:bob /usr/bob
 
 查看内存：cat /proc/meminfo | grep MemTotal
 
@@ -30,6 +17,12 @@ Redhat Linux Server release 6.2
 [root@localhost bob]# passwd ftptest
 
 学习git
+$ git config --global user.name "gsb7814"
+
+$ git config --global user.email "xxx@139.com"
+
+ ssh-keygen -t rsa  -P g*. -C "xxx@139.com"
+
 git init
 
 git add Centos.txt
@@ -49,6 +42,25 @@ git rm filename
 
 git diff
 git diff HEAD -- Centos.txt
+
+
+把一个已有的本地仓库与远程库（origin）关联
+$ cd /e/studygit/
+$ git remote add origin git@github.com:gsb7814/studygit.git
+
+(首次)把本地库（master）的所有内容推送到远程库上：
+$ git push -u origin master
+		Counting objects: 23, done.
+		Delta compression using up to 4 threads.
+		Compressing objects: 100% (15/15), done.
+		Writing objects: 100% (23/23), 2.72 KiB | 0 bytes/s, done.
+		Total 23 (delta 6), reused 0 (delta 0)
+		To git@github.com:gsb7814/studygit.git
+		 * [new branch]      master -> master
+		Branch master set up to track remote branch master from origin.
+
+把本地master分支的最新修改推送至GitHub
+$ git push origin master
 
 2015年11月9日修改
 ---------------------------------------------------------------------------------
