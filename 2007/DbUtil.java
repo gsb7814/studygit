@@ -3,7 +3,7 @@ package guo.sql;
 import java.sql.*;
 
 /*
- * 数据库操作类
+ * 鏁版嵁搴撴搷浣滅被
  */
 public class DbUtil {
 	

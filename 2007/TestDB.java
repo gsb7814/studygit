@@ -3,7 +3,7 @@ package guo.sql;
 import java.sql.*;
 
 /*
- * Ê¹ÓÃDbUtilÀàÊµÏÖÊı¾İ¿â²Ù×÷¡£
+ * ä½¿ç”¨DbUtilç±»å®ç°æ•°æ®åº“æ“ä½œã€‚
  */
 public class TestDB {
 	
@@ -37,34 +37,34 @@ public class TestDB {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		// ÓÃjdbc-odbcÇÅÁ¬½ÓÊı¾İ¿â
-		System.out.println("ÓÃjdbc-odbcÇÅÁ¬½ÓÊı¾İ¿â");
+		// ç”¨jdbc-odbcæ¡¥è¿æ¥æ•°æ®åº“
+		System.out.println("ç”¨jdbc-odbcæ¡¥è¿æ¥æ•°æ®åº“");
 		String dbDriver ="sun.jdbc.odbc.JdbcOdbcDriver";
-		String url="jdbc:odbc:stu";//odbcÊı¾İÔ´Ãû³Æ
+		String url="jdbc:odbc:stu";//odbcæ•°æ®æºåç§°
 		DbUtil db = new DbUtil(url,dbDriver);
 		db.getConnection("sa","sa");
 		String sql = "select * from stuInfo";
 		ResultSet rs = db.exeQuery(sql);
 		prtResultSet(rs);
 		db.disconnection();
-		/*//ÓÃjdbcÖ±Á¬
+		/*//ç”¨jdbcç›´è¿
 		System.out.println();
-		System.out.println("ÓÃjdbcÖ±Á¬");
+		System.out.println("ç”¨jdbcç›´è¿");
 		String dbDriver1 ="com.microsoft.jdbc.sqlserver.SQLServerDriver";
 		String url1="jdbc:Microsoft:sqlserve://localhost:1433;databaseName=student";
 		String userName="sa";
 		String password="sa";
 		DbUtil db1 = new DbUtil(url1,dbDriver1);
 		db1.getConnection(userName,password);
-		//String sql1 = "insert into stuInfo(number,name,sex,age) values(4,\"ÁõĞ¡»ª\",\"ÄĞ\",30)";
+		//String sql1 = "insert into stuInfo(number,name,sex,age) values(4,\"åˆ˜å°å\",\"ç”·\",30)";
 		//int n = db1.exeUpdate(sql1);
 		ResultSet rs1 = db1.exeQuery(sql);
 		prtResultSet(rs1);
 		db.disconnection();
 		*/
-		//ÓÃjdbcÖ±Á¬
+		//ç”¨jdbcç›´è¿
 		/*System.out.println();
-		System.out.println("ÓÃjdbcÖ±Á¬");
+		System.out.println("ç”¨jdbcç›´è¿");
 		String dbDriver1 ="com.mysql.jdbc.Driver";
 		String url1="jdbc:mysql://localhost:3306/student?useUnicode=true&characterEncoding=GB2312";
 		String userName="root";
@@ -73,8 +73,8 @@ public class TestDB {
 		db1.getConnection(userName,password);
 		ResultSet rs1 = db1.exeQuery(sql);
 		prtResultSet(rs1);
-		System.out.println(" ²åÈë¼ÇÂ¼ºó");
-		String sql1 = "insert into stuInfo(number,name,sex,age) values(4,'ÁõĞ¡»ª','ma',30)";
+		System.out.println(" æ’å…¥è®°å½•å");
+		String sql1 = "insert into stuInfo(number,name,sex,age) values(4,'åˆ˜å°å','ma',30)";
 		int n = db1.exeUpdate(sql1);
 		rs1 = db1.exeQuery(sql);
 		prtResultSet(rs1);
