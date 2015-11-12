@@ -1,0 +1,17 @@
+package mytags;
+
+import javax.servlet.jsp.tagext.*;
+import javax.servlet.jsp.JspWriter;
+
+public class Tag1 extends BodyTagSupport {
+    public Tag1() {
+    }
+    
+    public int doEndTag() {
+        BodyContent bc = getBodyContent();
+        String newStr = bc.getString().toUpperCase();
+        JspWriter out = pageContext.getOut();
+        out.println(newStr);
+        return EVAL_PAGE;
+    }
+}

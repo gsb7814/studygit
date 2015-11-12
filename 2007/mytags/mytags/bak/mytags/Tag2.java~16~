@@ -1,0 +1,80 @@
+package mytags;
+
+import javax.servlet.jsp.tagext.*;
+import javax.servlet.jsp.JspException;
+import java.io.IOException;
+import java.sql.*;
+import javax.servlet.jsp.JspWriter;
+
+public class Tag2 extends BodyTagSupport {
+    public Tag2() {
+        super();
+    }
+
+
+
+    public int doEndTag() throws JspException{
+        Connection conn = this.getConnection("jdbc:odbc:petclinicapps","sun.jdbc.odbc.JdbcOdbcDriver");
+        String sql = "select * from employee";
+        ResultSet rs = this.query(conn,sql);
+        JspWriter out = pageContext.getOut();
+        try {
+            while (rs.next()) {
+                out.println("<p>name = " + rs.getString("name")+"  ");
+                out.println("password = " + rs.getString("password")+"</p>");
+            }
+            if(rs != null) {
+                rs.close();
+            }
+            if(conn != null) {
+               close(conn);
+           }
+
+
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+
+        return EVAL_PAGE;
+    }
+
+    private Connection getConnection(String url, String driver) {
+        Connection conn = null;
+        try {
+            Class.forName(driver);
+            conn = DriverManager.getConnection(url);
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        } catch (ClassNotFoundException ex) {
+            ex.printStackTrace();
+        }
+        return conn;
+    }
+
+    private ResultSet query(Connection conn, String sql) {
+        if (conn != null) {
+        try {
+            PreparedStatement psmt = conn.prepareStatement(sql);
+            return psmt.executeQuery();
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            return null;
+        }
+        }
+        return null;
+    }
+
+    private void close(Connection conn) {
+        if (conn != null) {
+            try {
+                conn.close();
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+            }
+        }
+    }
+
+
+}
