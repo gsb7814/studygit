@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE struts PUBLIC "-//Apache Software Foundation//DTD Struts Configuration 2.1//EN" "http://struts.apache.org/dtds/struts-2.1.dtd">
+<struts>
+	 <package name="sysMng" namespace="/sysMng" extends="root">
+	 	<!-- 
+	 	<action name="userLogin" class="userInfoAction" method="login">
+			<result name="success">home.jsp</result>
+			<result name="fail">index.jsp</result>
+			<result name="input">index.jsp</result>
+		</action> 
+		-->
+		<action name="test_*" class="testAction" method="{1}">
+			<result name="success">test.jsp</result>
+		</action> 
+	 </package>
+</struts>

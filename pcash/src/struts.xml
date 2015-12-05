@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE struts PUBLIC "-//Apache Software Foundation//DTD Struts Configuration 2.1//EN" "http://struts.apache.org/dtds/struts-2.1.dtd">
+<struts>
+	<!-- 默认的视图主题 -->
+    <constant name="struts.ui.theme" value="simple" />
+
+	 <constant name="struts.objectFactory" value="spring" />
+	
+	<!-- 公用的全局root配置信息 -->
+	 <package name="root" namespace="/" extends="struts-default">
+	 			
+		<interceptors>
+	 		<interceptor name="permissionInterceptor" class="com.sxmccitlab.pcash.interceptor.PermissionInterceptor"/>
+	 		<interceptor-stack name="pcashStack">
+	 			<interceptor-ref name="defaultStack"/>
+	 			<interceptor-ref name="permissionInterceptor"/>
+	 		</interceptor-stack>
+		</interceptors>
+		
+		<default-interceptor-ref name="pcashStack"/>
+		
+		<global-results>
+			<result name="login">login.jsp</result>
+			<result name="error">error.jsp</result>
+		</global-results>
+		
+		<action name="*">
+		</action>
+		
+		<action name="logout" class="staffAction" method="logout">
+			<result name="success">login.jsp</result>
+		</action>
+				
+	 </package>
+	 
+	 <!-- 不需要访问权限校验的Action配置信息 -->
+	 <package name="notInInterceptor" namespace="/" extends="struts-default">
+	 	<action name="login" class="staffAction" method="login">
+			<result name="success">index.jsp</result>
+			<result name="input">login.jsp</result>
+		</action>
+	 </package>
+	 
+	 <!-- 系统管理配置文件 -->
+	 <include file="struts_sysmng.xml"/>
+	 <!-- 凭证管理配置文件 -->
+	 <include file="struts_vouchermng.xml"/>
+	 <!-- 期初管理配置文件 -->
+	 <include file="struts_beginningmng.xml"/>
+	 <!-- 期末管理配置文件 -->
+	 <include file="struts_endingmng.xml"/>
+	  <!-- 账簿管理配置文件 -->
+	 <include file="struts_bookmng.xml"/>
+	 <!-- 报表管理配置文件 -->
+	 <include file="struts_reportmng.xml"/>
+</struts>

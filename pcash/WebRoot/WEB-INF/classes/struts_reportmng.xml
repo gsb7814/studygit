@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE struts PUBLIC "-//Apache Software Foundation//DTD Struts Configuration 2.1//EN" "http://struts.apache.org/dtds/struts-2.1.dtd">
+<struts>
+	<constant name="struts.i18n.encoding" value="gb18030" />
+	<package name="reportMng" namespace="/reportMng" extends="root">
+		<!--
+			<action name="userLogin" class="userInfoAction" method="login">
+			<result name="success">home.jsp</result> <result
+			name="fail">index.jsp</result> <result
+			name="input">index.jsp</result> </action>
+		-->
+		<action name="findByBranch" class="reportAction">
+			<result name="success">/reportMng/profitAndLossRepBranch.jsp</result>
+			<result name="export">/reportMng/export_profitAndLossRepBranch.jsp</result>
+		</action>
+		<action name="findSales_Department" class="reportAction"
+			method="findSales_Department">
+			<result name="success">/reportMng/profitAndLossRepSales.jsp</result>
+			<result name="fail">/fail.jsp</result>
+		</action>
+		<action name="findBySales_Department" class="reportAction">
+			<result name="success">/reportMng/profitAndLossRepSales.jsp</result>
+			<result name="export">/reportMng/export_profitAndLossRepSales.jsp</result>
+		</action>
+		<action name="findByBranch_debt" class="debtreportAction">
+			<result name="success">/reportMng/assetsAndDebtRepBranch.jsp</result>
+			<result name="export">/reportMng/export_assetsAndDebtRepBranch.jsp</result>
+		</action>
+		<action name="findSales_Department_debt" class="debtreportAction"
+			method="findSales_Department">
+			<result name="success">/reportMng/assetsAndDebtRepSales.jsp</result>
+			<result name="fail">/fail.jsp</result>
+		</action>
+		<action name="findBySales_Department_debt" class="debtreportAction">
+			<result name="success">/reportMng/assetsAndDebtRepSales.jsp</result>
+			<result name="export">/reportMng/export_assetsAndDebtRepSales.jsp</result>
+		</action>
+
+	</package>
+</struts>

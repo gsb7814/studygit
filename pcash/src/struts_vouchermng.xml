@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE struts PUBLIC "-//Apache Software Foundation//DTD Struts Configuration 2.1//EN" "http://struts.apache.org/dtds/struts-2.1.dtd">
+<struts>
+	
+	 <package name="voucherMng" namespace="/voucherMng" extends="struts-default">
+	 	
+		<!-- 凭证管理 -->
+    <action name="voucherMng_*" class="voucherMngAction" method="{1}">
+		<result name="showAddVoucher">/voucherMng/voucherAdd.jsp</result>
+		<result name="addVoucher">/voucherMng/voucherChargeSearch.jsp</result>
+		
+		<result name="showChargeVoucher">/voucherMng/voucherChargeSearch.jsp</result>
+		<result name="searchChargeVoucher">/voucherMng/voucherChargeSearchResult.jsp</result>
+		<result name="chargeVoucher">/voucherMng/voucherChargeSearch.jsp</result>
+		
+		<result name="showUnChargedVoucher">/voucherMng/voucherUnchargedSearch.jsp</result>
+		<result name="searchUnChargedVoucher">/voucherMng/voucherUnchargedSearchResult.jsp</result>
+		<result name="unChargedVoucher">/voucherMng/voucherChargeSearch.jsp</result>
+		
+		<result name="showSearchVoucher">/voucherMng/voucherSearch.jsp</result>
+		<result name="searchVoucher">/voucherMng/voucherSearchResult.jsp</result>
+		
+		<result name="showModifyVoucher">/voucherMng/voucherModify.jsp</result>
+		<result name="modifyVoucher">/voucherMng/voucherChargeSearch.jsp</result>
+		
+		<result name="searchVoucherInfo">/voucherMng/voucherInfoView.jsp</result>
+		
+		
+		
+	</action>	
+	 </package>
+	 
+</struts>

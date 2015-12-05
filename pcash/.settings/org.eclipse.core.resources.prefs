@@ -1,0 +1,11 @@
+#Wed Apr 28 14:11:22 CST 2010
+eclipse.preferences.version=1
+encoding//WebRoot/Frame/LeftFrame.htm=UTF-8
+encoding//WebRoot/Frame/LeftFrame5.jsp=UTF-8
+encoding//WebRoot/Frame/TopFrame.jsp=UTF-8
+encoding//WebRoot/Frame/org.html=UTF-8
+encoding//WebRoot/script.sql=UTF-8
+encoding//src/com/sxmccitlab/common/PageUtil.java=UTF-8
+encoding//src/com/sxmccitlab/pcash/action/impl/VoucherMngAction.java=UTF-8
+encoding//src/com/sxmccitlab/pcash/bo/impl/VoucherMngBO.java=UTF-8
+encoding//src/com/sxmccitlab/pcash/dao/impl/ToolDAO.java=UTF-8

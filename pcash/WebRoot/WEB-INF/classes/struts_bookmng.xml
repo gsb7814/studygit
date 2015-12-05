@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE struts PUBLIC "-//Apache Software Foundation//DTD Struts Configuration 2.1//EN" "http://struts.apache.org/dtds/struts-2.1.dtd">
+<struts>
+	
+	 <package name="bookMng" namespace="/bookMng" extends="root">
+	 	<!-- 
+	 	<action name="userLogin" class="userInfoAction" method="login">
+			<result name="success">home.jsp</result>
+			<result name="fail">index.jsp</result>
+			<result name="input">index.jsp</result>
+		</action> 
+		-->
+	   
+      
+      
+   
+   
+      <action name="detailLedger" class="detailLedgerAction"  >
+          <result name="success">/bookMng/detailLedger.jsp</result>
+           <result name="export">/bookMng/exportdetailLedger.jsp</result>
+       </action>
+        <action name="dailyLedger" class="detailLedgerAction"  >
+          <result name="success">/bookMng/dailyLedger.jsp</result>
+          <result name="export">/bookMng/exportdailyLedger.jsp</result>
+       </action>
+      <action name="generalLedger" class="detailLedgerAction"  >
+          <result name="success">/bookMng/generalLedger.jsp</result>
+           <result name="export">/bookMng/exportgeneralLedger.jsp</result>
+       </action>
+       
+   
+     
+         <action name="detailLedgerfy" class="detailLedgerAction" method="searchfy" >
+          <result name="success">/bookMng/detailLedger.jsp</result>
+       </action>
+       
+    
+      <action name="dailyLedgerfy" class="detailLedgerAction" method="searchDailyLedgerfy" >
+          <result name="success">/bookMng/dailyLedger.jsp</result>
+       </action>
+       
+          
+      <action name="generalLedgerfy" class="detailLedgerAction" method="searchGeneralLedgerfy" >
+          <result name="success">/bookMng/generalLedger.jsp</result>
+       </action>
+	 </package>
+	 
+</struts>

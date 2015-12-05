@@ -1,0 +1,73 @@
+<html>
+<head>
+<title>Select Op</title>
+<meta http-equiv="Content-Type" content="text/html;charset=gb2312" />
+<script type="text/javascript">
+var o;
+function MoveTo(index)
+{
+  if (index!=undefined)
+  {
+    o=source.options[index]; 
+    distinct.options.add(new Option(o.text,o.value));
+    source.remove(index);
+  }
+  else
+  {
+    for(var i=0;i<source.options.length;)//不要在这里控制i的增长，因为有可能删除了option
+    {
+      if(source.options[i].selected)
+      {
+         o=source.options[i];
+         distinct.options.add(new Option(o.text,o.value));
+         source.options.remove(i);
+         i=0;
+      }
+      else
+       i++;
+    }
+  }
+}
+function MoveBack(index)
+{
+  if (index!=undefined)
+  {
+    o=distinct.options[index];
+    source.options.add(new Option(o.text,o.value));
+    distinct.remove(index);   
+  }
+  else
+  {
+    for(var i=0;i<distinct.options.length;)//不要在这里控制i的增长，因为有可能删除了option
+    {
+      if(distinct.options[i].selected)
+      {
+         o=distinct.options[i];
+         source.options.add(new Option(o.text,o.value));
+         distinct.options.remove(i);
+         i=0;
+      }
+      else
+        i++;
+    }
+  }
+}
+</script>
+</head>
+<body>
+<table width='500' border='1' cellpadding='0' cellspacing='0'>
+<tr>
+<td width='45%' align="center"><select id='source' multiple="multiple" style="width:200; height:300" ondblclick="MoveTo(this.selectedIndex)">
+<option value='1'>Item1</option>
+<option value='2'>Item2</option>
+<option value='3'>Item3</option>
+<option value='4'>Item4</option>
+<option value='5'>Item5</option>
+<option value='6'>Item6</option>
+</select></td>
+<td width='10%' align="center"><input type="button" value=">>" onclick="MoveTo()" /><br /><input type="button" value="<<" onclick="MoveBack()" /></td>
+<td width='45%'><select id='distinct' ondblclick="MoveBack(this.selectedIndex)" style="width:200; height:300" multiple="multiple" align="center"></select></td>
+</tr>
+</table>
+</body>
+</html>

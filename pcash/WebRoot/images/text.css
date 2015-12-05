@@ -1,0 +1,121 @@
+body {
+	margin: 0px;
+	padding: 0px;
+}
+td {
+	font-size: 12px;
+	color: #cccccc;
+	line-height: 22px;
+}
+.leftmenu_out {
+	BORDER-LEFT: #0d69b2 6px solid; PADDING-LEFT: 5px; BACKGROUND: #1687CB; WIDTH: 170px; CURSOR: hand; COLOR: #ffffff; HEIGHT: 23px
+}
+.leftmenu_over {
+	BORDER-LEFT: #ffc000 6px solid; PADDING-LEFT: 5px; BACKGROUND: #0d69b2; WIDTH: 170px; CURSOR: hand; COLOR: #ffffff; HEIGHT: 23px
+}
+.leftmenu_three_out {
+	PADDING-LEFT: 5px; WIDTH: 170px; BACKGROUND: #ddecff; CURSOR: hand; HEIGHT: 22px
+}
+a.leftMenu:link {
+	color: #333333;
+	text-decoration: none;
+}
+a.leftMenu:visited {
+	color: #333333;;
+	text-decoration: none;
+}
+a.leftMenu:hover {
+	color: #999999;
+	text-decoration: underline;
+}
+.LeftTitle {
+
+	font-size: 14px;
+	font-weight: bold;
+	color: #FFFFFF;
+}
+body {
+	margin-left: 0px;
+	margin-top: 0px;
+	margin-right: 0px;
+	margin-bottom: 0px;
+}
+a.Menu:link {
+	font-size: 14px;
+	font-weight: bold;
+	color: #FFFFFF;
+	text-decoration: none;
+}
+a.Menu:visited {
+	font-size: 14px;
+	font-weight: bold;
+	color: #FFFFFF;
+	text-decoration: none;
+}
+a.Menu:hover {
+	font-size: 14px;
+	font-weight: bold;
+	color: #CCCCCC;
+	text-decoration: underline;
+}
+.RightBg {
+	background-image: url(images/TopRight.jpg);
+	background-repeat: no-repeat;
+	background-position: right top;
+}
+.Title {
+	font-size: 14px;
+	font-weight: bold;
+}
+.BgLine {
+	background-image: url(images/BgLine.gif);
+	background-repeat: repeat-y;
+}
+.WhiteFont {
+	font-size: 12px;
+	color: #FFFFFF;
+}
+.RedFont {
+	font-size: 12px;
+	color: red;
+}
+td {
+	font-size: 12px;
+	color: #000000;
+}
+a:link {
+	color: #333333;
+	text-decoration: underline;
+}
+a:visited {
+	color: #333333;
+	text-decoration: underline;
+}
+a:hover {
+	color: #666666;
+	text-decoration: none;
+}
+input {
+	border: 1px solid #333333;
+	font-size: 12px;
+}
+.buttonborder {
+	border-top-width: 1px;
+	border-right-width: 1px;
+	border-bottom-width: 1px;
+	border-left-width: 1px;
+	border-top-style: solid;
+	border-right-style: solid;
+	border-bottom-style: solid;
+	border-left-style: solid;
+	border-top-color: #ffffff;
+	border-right-color: #333333;
+	border-bottom-color: #333333;
+	border-left-color: #ffffff;
+	background-color: #CCCCCC;
+	padding: 1px;
+}
+.TableTitle {
+	color: #666666;
+	font-weight: bold;
+}

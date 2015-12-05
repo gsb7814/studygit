@@ -1,0 +1,129 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=gb2312" />
+<title>无标题文档</title>
+<link href="../images/text.css" rel="stylesheet" type="text/css" />
+<script type="text/javascript">
+var o;
+function MoveTo(index)
+{
+  if (index!=undefined)
+  {
+    o=source.options[index]; 
+    distinct.options.add(new Option(o.text,o.value));
+    source.remove(index);
+  }
+  else
+  {
+    for(var i=0;i<source.options.length;)//不要在这里控制i的增长，因为有可能删除了option
+    {
+      if(source.options[i].selected)
+      {
+         o=source.options[i];
+         distinct.options.add(new Option(o.text,o.value));
+         source.options.remove(i);
+         i=0;
+      }
+      else
+       i++;
+    }
+  }
+}
+function MoveBack(index)
+{
+  if (index!=undefined)
+  {
+    o=distinct.options[index];
+    source.options.add(new Option(o.text,o.value));
+    distinct.remove(index);   
+  }
+  else
+  {
+    for(var i=0;i<distinct.options.length;)//不要在这里控制i的增长，因为有可能删除了option
+    {
+      if(distinct.options[i].selected)
+      {
+         o=distinct.options[i];
+         source.options.add(new Option(o.text,o.value));
+         distinct.options.remove(i);
+         i=0;
+      }
+      else
+        i++;
+    }
+  }
+}
+</script></head>
+
+<body>
+<table width="100%" border="0" align="center" cellpadding="0" cellspacing="0" bgcolor="#DDECFF">
+  <tr>
+    <td height="3" colspan="3" bgcolor="#FFCC00"></td>
+  </tr>
+  <tr>
+    <td height="1" colspan="3" bgcolor="#ffffff"></td>
+  </tr>
+  <tr>
+    <td width="12" height="24">&nbsp;</td>
+    <td width="25"><img src="../images/PositionDot.gif" width="13" height="13" /></td>
+    <td>当前位置： <a href="../SlideIndex.htm" target="_top">首页</a> &gt;&gt; 系统管理 &gt;&gt; 添加角色</td>
+  </tr>
+  <tr>
+    <td height="1" colspan="3" bgcolor="#333333"><img src="../images/11Dot.gif" width="1" height="1" /></td>
+  </tr>
+</table>
+<br />
+<table width="780" border="0" align="center" cellpadding="0" cellspacing="1" bgcolor="#999999">
+  <tr bgcolor="#F3F3F3">
+    <td align="left" bgcolor="#F3F3F3"><table width="100%" border="0" cellspacing="0" cellpadding="0">
+      <tr>
+        <td width="37"><div align="center"><img src="../images/icon_arrow_table.gif" width="9" height="9" /></div></td>
+        <td width="200" class="Title">添加用户</td>
+        <td class="TableTitle">&nbsp;</td>
+      </tr>
+    </table></td>
+  </tr>
+</table>
+<table width="780" border="0" align="center" cellpadding="0" cellspacing="1" bgcolor="#999999">
+  <tr bgcolor="#F3F3F3">
+    <td colspan="4" align="left" bgcolor="#FFFFFF"><table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#FAFAFA">
+      <tr>
+        <td width="37"><div align="center"><img src="../images/ArrowDown.gif" width="9" height="5" /></div></td>
+        <td width="200" class="TableTitle">录入角色基本信息</td>
+        <td class="TableTitle">&nbsp;</td>
+      </tr>
+    </table></td>
+  </tr>
+  <tr>
+    <td width="20%" align="left" bgcolor="#FFFFFF"><div align="right">姓名：</div></td>
+    <td width="30%" align="left" bgcolor="#FFFFFF">&nbsp;<input type="text" name="roleName"/></td>
+    <td width="20%" align="left" bgcolor="#FFFFFF"><div align="right">工号：</div></td>
+    <td colspan="2" align="left" bgcolor="#FFFFFF"><span class="TableTitle"> &nbsp;<input type="text" name="comments"/></span></td>
+  </tr>
+  <tr>
+    <td width="20%" align="left" bgcolor="#FFFFFF"><div align="right">手机号码：</div></td>
+    <td width="30%" align="left" bgcolor="#FFFFFF">&nbsp;<input type="text" name="roleName"/></td>
+    <td width="20%" align="left" bgcolor="#FFFFFF"><div align="right">邮箱：</div></td>
+    <td colspan="2" align="left" bgcolor="#FFFFFF"><span class="TableTitle"> &nbsp;<input type="text" name="comments"/></span></td>
+  </tr>
+</table>
+<table width="780" border="0" align="center" cellpadding="0" cellspacing="1" bgcolor="#999999">
+  <tr>
+    <td width="415" align="left" bgcolor="#FFFFFF"><table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#FAFAFA">
+      <tr>
+        <td width="37"><div align="center"><img src="../images/ArrowDown.gif" width="9" height="5" /></div></td>
+        <td width="200" class="TableTitle">选择角色权限信息</td>
+        <td class="TableTitle">&nbsp;</td>
+      </tr>
+    </table></td>
+  </tr>
+  
+  <tr>
+    <td height="25" align="left" bgcolor="#FFFFFF"><div align="right">
+      <input name="Submit22" type="button" class="buttonborder" value="保存角色" />
+      &nbsp;</div></td>
+  </tr>
+</table>
+</body>
+</html>

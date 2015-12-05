@@ -1,0 +1,319 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<beans
+	xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.5.xsd
+	http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-2.5.xsd
+	http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-2.5.xsd">
+
+	<!-- 
+	<bean id="dataSource"
+		class="org.apache.commons.dbcp.BasicDataSource">
+		<property name="driverClassName"
+			value="oracle.jdbc.driver.OracleDriver">
+		</property>
+		<property name="url"
+			value="jdbc:oracle:thin:@localhost:1521:orac">
+		</property>
+		<property name="username" value="pcash"></property>
+		<property name="password" value="pcash"></property>
+	</bean>
+	-->
+
+	<bean id="dataSource"
+		class="org.apache.commons.dbcp.BasicDataSource">
+		<property name="driverClassName"
+			value="oracle.jdbc.driver.OracleDriver">
+		</property>
+		<property name="url"
+			value="jdbc:oracle:thin:@10.204.96.208:1521:orcl">
+		</property>
+		<property name="username" value="pcash"></property>
+		<property name="password" value="pcash"></property>
+	</bean>
+	
+	<bean id="sessionFactory"
+		class="org.springframework.orm.hibernate3.LocalSessionFactoryBean">
+		<property name="dataSource">
+			<ref bean="dataSource"/>
+		</property>
+		<property name="hibernateProperties">
+			<props>
+				<prop key="hibernate.dialect">org.hibernate.dialect.OracleDialect</prop>
+				<prop key="hibernate.show_sql">true</prop>
+			</props>
+		</property>
+		
+		<property name="mappingDirectoryLocations">
+			<list>
+				<value>classpath:com/sxmccitlab/pcash/po/hbm</value>
+			</list>
+
+		</property>
+	</bean>
+	
+	<bean name="transactionManager"
+		class="org.springframework.orm.hibernate3.HibernateTransactionManager">
+		<property name="sessionFactory" ref="sessionFactory"></property>
+
+	</bean>
+
+	<tx:advice id="txAdvice" transaction-manager="transactionManager">
+		<tx:attributes>
+			<tx:method name="add*" propagation="REQUIRED" />
+			<tx:method name="delete*" propagation="REQUIRED" />
+			<tx:method name="update*" propagation="REQUIRED" />
+			<tx:method name="query*" propagation="REQUIRED" />
+			<tx:method name="*" read-only="true" />
+		</tx:attributes>
+	</tx:advice>
+
+
+	<aop:config>
+		<aop:pointcut id="allManagerMethod"
+			expression="execution(* com.sxmccitlab.pcash.bo.*.*(..))" />
+		<aop:advisor advice-ref="txAdvice" pointcut-ref="allManagerMethod" />
+	</aop:config>
+
+	
+	<!--********************系统管理配置文件 sysMng module configuration Started********-->
+	<bean id="staffDAO" class="com.sxmccitlab.pcash.dao.impl.StaffDAO">
+		<property name="sessionFactory">
+			<ref bean="sessionFactory" />
+		</property>
+	</bean>
+	
+	<bean id="staffBO" class="com.sxmccitlab.pcash.bo.impl.StaffBO">
+		<property name="staffDAO">
+			<ref bean="staffDAO"/>
+		</property>
+	</bean>
+	
+	<bean id="staffAction" class="com.sxmccitlab.pcash.action.impl.StaffAction">
+		<property name="staffBO">
+			<ref bean="staffBO"/>
+		</property>
+	</bean>
+	
+	<bean id="roleDAO" class="com.sxmccitlab.pcash.dao.impl.RoleDAO">
+		<property name="sessionFactory">
+			<ref bean="sessionFactory" />
+		</property>
+	</bean>
+	<bean id="unitDAO" class="com.sxmccitlab.pcash.dao.impl.UnitDAO">
+		<property name="sessionFactory">
+			<ref bean="sessionFactory" />
+		</property>
+	</bean>
+	<bean id="menuDAO" class="com.sxmccitlab.pcash.dao.impl.MenuDAO">
+		<property name="sessionFactory">
+			<ref bean="sessionFactory" />
+		</property>
+	</bean>
+	<bean id="rightDAO" class="com.sxmccitlab.pcash.dao.impl.RightDAO">
+		<property name="sessionFactory">
+			<ref bean="sessionFactory" />
+		</property>
+	</bean>
+	<bean id="roleRightDAO"
+		class="com.sxmccitlab.pcash.dao.impl.RoleRightDAO">
+		<property name="sessionFactory">
+			<ref bean="sessionFactory" />
+		</property>
+	</bean>
+	<bean id="regionDAO"
+		class="com.sxmccitlab.pcash.dao.impl.RegionDAO">
+		<property name="sessionFactory">
+			<ref bean="sessionFactory" />
+		</property>
+	</bean>
+	
+	<bean id="testAction"
+		class="com.sxmccitlab.pcash.action.impl.test.TestAction">
+		<property name="regionDAO">
+			<ref bean="regionDAO" />
+		</property>
+	</bean>
+	<!--******************系统管理配置文件结束 sysMng module configuration Ended****************-->
+	
+	 
+	<!--******************凭证管理配置文件开始voucherMng module configuration Started**************-->
+	<bean id="voucherDAO"
+		class="com.sxmccitlab.pcash.dao.impl.VoucherDAO">
+		<property name="sessionFactory">
+			<ref bean="sessionFactory" />
+		</property>
+	</bean>
+	<bean id="voucherDetailDAO"
+		class="com.sxmccitlab.pcash.dao.impl.VoucherDetailDAO">
+		<property name="sessionFactory">
+			<ref bean="sessionFactory" />
+		</property>
+	</bean>
+	<bean id="serialDAO" class="com.sxmccitlab.pcash.dao.impl.SerialDAO">
+		<property name="sessionFactory">
+			<ref bean="sessionFactory" />
+		</property>
+	</bean>
+	<bean id="voucherTypeDAO"
+		class="com.sxmccitlab.pcash.dao.impl.VoucherTypeDAO">
+		<property name="sessionFactory">
+			<ref bean="sessionFactory" />
+		</property>
+	</bean>
+
+	<bean id="toolDAO" class="com.sxmccitlab.pcash.dao.impl.ToolDAO">
+		<property name="sessionFactory">
+			<ref bean="sessionFactory"></ref>
+		</property>
+	</bean>
+	
+
+
+	<bean id="voucherMngBO" class="com.sxmccitlab.pcash.bo.impl.VoucherMngBO">
+		<property name="toolDAO">
+			<ref bean="toolDAO" />
+		</property>
+		<property name="voucherTypeDAO">
+			<ref bean="voucherTypeDAO" />
+		</property>
+		<property name="accountDAO">
+			<ref bean="accountDAO" />
+		</property>
+		<property name="serialDAO">
+			<ref bean="serialDAO" />
+		</property>
+		<property name="voucherDetailDAO">
+			<ref bean="voucherDetailDAO" />
+		</property>
+		<property name="voucherDAO">
+			<ref bean="voucherDAO" />
+		</property>
+		<property name="accountTypeDAO">
+			<ref bean="accountTypeDAO" />
+		</property>
+		<property name="accountingPeriodDAO">
+			<ref bean="accountingPeriodDAO" />
+		</property>
+	</bean>
+
+	<bean id="voucherMngAction" class="com.sxmccitlab.pcash.action.impl.VoucherMngAction"
+		scope="prototype">
+		<property name="voucherMngBO">
+			<ref local="voucherMngBO" />
+		</property>
+	</bean>
+	
+	<bean id="accountingPeriodDAO"
+		class="com.sxmccitlab.pcash.dao.impl.AccountingPeriodDAO">
+		<property name="sessionFactory">
+			<ref bean="sessionFactory" />
+		</property>
+	</bean>
+	
+	<!--******************凭证管理配置文件结束voucherMng module configuration Started**************-->
+	
+	
+	<!--******************期初管理配置文件开始beginningMng module configuration Started**************-->
+	<bean id="accountTypeDAO"
+		class="com.sxmccitlab.pcash.dao.impl.AccountTypeDAO">
+		<property name="sessionFactory">
+			<ref bean="sessionFactory" />
+		</property>
+	</bean>
+	<bean id="accountDAO"
+		class="com.sxmccitlab.pcash.dao.impl.AccountDAO">
+		<property name="sessionFactory">
+			<ref bean="sessionFactory" />
+		</property>
+	</bean>
+	<bean id="accountBO" class="com.sxmccitlab.pcash.bo.impl.AccountBO">
+		<property name="accountDAO">
+			<ref local="accountDAO" />
+		</property>
+	</bean>
+	<bean id="accountAction" class="com.sxmccitlab.pcash.action.impl.AccountAction">
+		<property name="accountBO">
+			<ref local="accountBO" />
+		</property>
+	</bean>
+	<!--******************期初管理配置文件结束beginningMng module configuration ended**************-->
+	
+	
+	
+	<!--******************期末管理配置文件开始endingMng module configuration Started**************-->
+	<bean id="accountBalanceDAO"
+		class="com.sxmccitlab.pcash.dao.impl.AccountBalanceDAO">
+		<property name="sessionFactory">
+			<ref bean="sessionFactory" />
+		</property>
+	</bean>
+	
+	<bean id="accountBalanceMonthBO" class="com.sxmccitlab.pcash.bo.impl.AccountBalanceMonthBO">
+		<property name="accountBalanceDAO">
+			<ref local="accountBalanceDAO" />
+		</property>
+	</bean>
+	<bean id="accountBalanceBO" class="com.sxmccitlab.pcash.bo.impl.AccountBalanceBO">
+		<property name="toolDAO">
+			<ref bean="toolDAO" />
+		</property>
+	</bean>
+	<bean id="monthCheckAction" class="com.sxmccitlab.pcash.action.impl.MonthCheckSumAction">
+		<property name="accountBalanceBO">
+			<ref local="accountBalanceBO" />
+		</property>
+	</bean>
+	<!--******************期末管理配置文件结束endingMng module configuration ended**************-->
+	
+	
+	
+	<!--******************报表管理配置文件开始reportMng module configuration Started**************-->
+	<bean id="reportDAO" class="com.sxmccitlab.pcash.dao.impl.ReportDAO">
+		<property name="sessionFactory">
+			<ref bean="sessionFactory" />
+		</property>
+	</bean>
+	<bean id="reportBO" class="com.sxmccitlab.pcash.bo.impl.ReportBO">
+		<property name="reportDAO">
+			<ref bean="reportDAO"/>
+		</property>
+		<property name="unitDAO">
+			<ref bean="unitDAO"/>
+		</property>
+	</bean>
+	<bean id="reportAction" class="com.sxmccitlab.pcash.action.impl.ReportAction" >
+		<property name="reportBO">
+			<ref bean="reportBO"/>
+		</property>
+	</bean>
+	<bean id="debtreportAction" class="com.sxmccitlab.pcash.action.impl.DebtreportAction" >
+		<property name="reportBO">
+			<ref bean="reportBO"/>
+		</property>
+	</bean>
+	<!--******************报表管理配置文件结束reportMng module configuration ended**************-->
+	
+	
+	
+	
+	<!--******************账簿管理配置文件开始bookMng module configuration Started**************-->
+	<bean id="bookMngBO"
+		class="com.sxmccitlab.pcash.bo.impl.BookMngBO" >
+		<property name="voucherDetailDAO">
+			<ref bean="voucherDetailDAO" />
+		</property>
+	</bean>
+		
+	
+   <bean id="detailLedgerAction" class="com.sxmccitlab.pcash.action.impl.BookMngAction" scope="prototype">
+		<property name="bookMngBO">
+			<ref bean="bookMngBO" />
+		</property>
+	</bean>	
+	<!--******************账簿管理配置文件结束bookMng module configuration ended**************-->
+	
+	</beans>

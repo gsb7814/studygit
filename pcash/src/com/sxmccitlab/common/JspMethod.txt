@@ -1,0 +1,2401 @@
+package com.sxmccitlab.common;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+
+import org.apache.log4j.Logger;
+import org.jdom.Document;
+import org.jdom.Element;
+import org.jdom.JDOMException;
+import org.jdom.input.JDOMParseException;
+import org.jdom.input.SAXBuilder;
+
+import com.ibm.ApplicationException;
+import com.ibm.Globals;
+import com.ibm.admin.permission.MenuContainer;
+import com.ibm.admin.permission.MenuFunction;
+import com.ibm.util.StrUtil;
+
+/**
+ * Copyright (c) 2008 IBM All right reserved. This program was created by IBM SC
+ * AI Team.
+ * <p>
+ * 包 名：* com.ibm.admin
+ * </p>
+ * <p>
+ * 模块功能：<这里输入模块名称><br>
+ * <p>
+ * 描述: 这里输入功能描述
+ * <p>
+ * 作者：@author tuple
+ * <p>
+ * 版本: v1.0
+ * <p>
+ * 修改人：tuple
+ * <p>
+ * 日期: 2008-7-28
+ */
+public class JspMethod {
+
+	static Logger logger = Logger.getLogger("APP.LOG");
+
+	public static String showRoleList(Role role, long userRoleID, int layer) {
+		StringBuffer buf = new StringBuffer();
+		if (layer == 1) {
+			if (userRoleID == role.getId())
+				buf.append("<option value='").append(role.getId()).append(
+						"' SELECTED>");
+			else
+				buf.append("<option value='").append(role.getId()).append("'>");
+			buf.append("&#149;").append(role.getName());
+
+			// if(userRoleID==role.getId())
+			// buf.append("(当前)");
+		}
+		Iterator iter = RoleManager.getChild(role);
+		Role childRole = null;
+		while (iter.hasNext()) {
+			childRole = (Role) iter.next();
+			if (userRoleID == childRole.getId())
+				buf.append("<option value='").append(childRole.getId()).append(
+						"' SELECTED>");
+			else
+				buf.append("<option value='").append(childRole.getId()).append(
+						"'>");
+
+			for (int i = 0; i < layer; i++)
+				buf.append("&nbsp;&nbsp;");
+
+			buf.append("&#149;").append(childRole.getName());
+
+			if (userRoleID == childRole.getId())
+				buf.append("(当前)");
+
+			buf.append(showRoleList(childRole, userRoleID, layer + 1));
+		}
+		return buf.toString();
+	}
+
+	public static String showFunctionList(Function function, Role role,
+			long functionID) {
+		StringBuffer buf = new StringBuffer();
+		Iterator iter = RoleFunctionManager
+				.getRoleChildFunction(function, role);
+		Function childFunction = null;
+		while (iter.hasNext()) {
+			childFunction = (Function) iter.next();
+			if (!childFunction.isMenu())
+				continue;
+			if (functionID == childFunction.getId())
+				buf.append("<option value='").append(childFunction.getId())
+						.append("' SELECTED>");
+			else
+				buf.append("<option value='").append(childFunction.getId())
+						.append("'>");
+
+			for (int i = 1; i < childFunction.getLayer(); i++)
+				buf.append("&nbsp;&nbsp;&nbsp;");
+
+			buf.append("&#149;").append(childFunction.getName());
+
+			// if(functionID==childFunction.getId())
+			// buf.append("(当前)");
+			buf.append("</option>");
+			buf.append(showFunctionList(childFunction, role, functionID));
+		}
+		return buf.toString();
+	}
+
+	public static ArrayList filterOpenMenu(ArrayList opened, Integer click,
+			boolean isOpen) throws ApplicationException {
+		Iterator iter;
+		Function func;
+		boolean found;
+		int i = 0;
+		if (isOpen) {
+			iter = FunctionManager.getRootToChildPath(click.intValue());
+			while (iter.hasNext()) {
+				func = (Function) iter.next();
+				for (i = 0; i < opened.size(); i++)
+					if (((Integer) opened.get(i)).intValue() == func.getId()) {
+						opened.remove(i);
+						break;
+					}
+			}
+			opened.add(click);
+		} else {
+			while (i < opened.size()) {
+				iter = FunctionManager.getRootToChildPath(((Integer) opened
+						.get(i)).intValue());
+				found = false;
+				while (iter.hasNext()) {
+					func = (Function) iter.next();
+					if (func.getId() == click.intValue()) {
+						opened.remove(i);
+						boolean addFather = true;
+						Function father = FunctionManager.getFunction(func
+								.getParentID());
+						for (int j = 0; j < opened.size(); j++) {
+							Iterator iter2 = FunctionManager
+									.getRootToChildPath(((Integer) opened
+											.get(j)).intValue());
+							while (iter2.hasNext()) {
+								Function func2 = (Function) iter2.next();
+								if (father == func2) {
+									addFather = false;
+									break;
+								}
+							}
+						}
+						if (addFather)
+							opened.add(new Integer((int) father.getId()));
+						found = true;
+						break;
+					}
+				}
+				if (!found)
+					i++;
+			}
+		}
+		return opened;
+	}
+
+	/**
+	 * 一次能打开多个菜单
+	 * 
+	 * @param menu
+	 * @param currentFunction
+	 * @param layer
+	 * @param role
+	 * @param LastList
+	 * @return
+	 */
+	public static String showMenu(ArrayList menu, Function currentFunction,
+			int layer, Role role, boolean[] LastList) {
+		StringBuffer buf = new StringBuffer();
+		Function function;
+		boolean[] isLast = new boolean[LastList.length];
+		boolean hasChild;
+		ArrayList layerFunction = new ArrayList();
+		int i = 0;
+		while (i < menu.size()) {
+			function = (Function) menu.get(i);
+			if (function.getParentID() == currentFunction.getId()) {
+				layerFunction.add(function);
+				menu.remove(i);
+			} else
+				i++;
+		}
+
+		layerFunction = FunctionManager.sort(layerFunction);
+
+		for (i = 0; i < layerFunction.size(); i++) {
+			function = (Function) layerFunction.get(i);
+			hasChild = false;
+			for (int j = 0; j < LastList.length; j++)
+				isLast[j] = LastList[j];
+
+			for (int j = 0; j < menu.size(); j++)
+				if (function.getId() == ((Function) menu.get(j)).getParentID()) {
+					hasChild = true;
+					break;
+				}
+
+			Iterator iterChildFunction = RoleFunctionManager
+					.getRoleChildFunction(function, role);
+			buf.append("<tr align='left'><td></td><td>");
+			buf
+					.append("<table cellpadding='0' cellspacing='0' border='0' width='100%' align='left'>");
+			buf.append("<tr height='5px'>");
+
+			for (int space = 1; space < function.getLayer(); space++) {
+				if (isLast[space])
+					buf
+							.append("<td width='1%'><img src='../images/Tree/blank.gif' border='0'></td>");
+				else
+					buf
+							.append("<td width='1%'><img src='../images/Tree/blankdots.gif' border='0'></td>");
+			}
+
+			if (iterChildFunction.hasNext()) {
+				buf.append("<TD align='left' width='1%'>");
+				if (i == 0) { // the first
+					if (function.getLayer() == 1) {
+						if (hasChild)
+							if (i != layerFunction.size() - 1)
+								buf
+										.append(
+												"<a href='javascript:closeFunction(\"")
+										.append(function.getId())
+										.append("\",\"\")'>")
+										.append(
+												"<img  src='../images/Tree/beginminus.gif' border='0'>");
+							else {
+								isLast[function.getLayer()] = true;
+								buf
+										.append(
+												"<a href='javascript:closeFunction(\"")
+										.append(function.getId())
+										.append("\",\"\")'>")
+										.append(
+												"<img  src='../images/Tree/Minubox.gif' border='0'>");
+							}
+						else if (iterChildFunction.hasNext())
+							// buf.append("menu.jsp?functionID=").append(function.getId()).append("&openedFunction=").append(openedFunctionList);
+							buf
+									.append(
+											"<a href='javascript:openFunction(\"")
+									.append(function.getId())
+									.append("\",\"\")'>")
+									.append(
+											"<img  src='../images/Tree/beginplus.gif' border='0'>");
+						else {
+							isLast[function.getLayer()] = true;
+							buf
+									.append(
+											"<a href='javascript:openFunction(\"")
+									.append(function.getId())
+									.append("\",\"\")'>")
+									.append(
+											"<img  src='../images/Tree/Plusbox.gif' border='0'>");
+						}
+					} else {
+						if (hasChild) {
+							if (i != layerFunction.size() - 1)
+								buf
+										.append(
+												"<a href='javascript:closeFunction(\"")
+										.append(function.getId())
+										.append("\",\"\")'>")
+										.append(
+												"<img  src='../images/Tree/minus.gif' border='0'>");
+							else {
+								isLast[function.getLayer()] = true;
+								buf
+										.append(
+												"<a href='javascript:closeFunction(\"")
+										.append(function.getId())
+										.append("\",\"\")'>")
+										.append(
+												"<img  src='../images/Tree/lastminus.gif' border='0'>");
+							}
+						} else if (i != layerFunction.size() - 1)
+							buf
+									.append(
+											"<a href='javascript:openFunction(\"")
+									.append(function.getId())
+									.append("\",\"\")'>")
+									.append(
+											"<img  src='../images/Tree/plus.gif' border='0'>");
+						else {
+							isLast[function.getLayer()] = true;
+							buf
+									.append(
+											"<a href='javascript:openFunction(\"")
+									.append(function.getId())
+									.append("\",\"\")'>")
+									.append(
+											"<img  src='../images/Tree/lastplus.gif' border='0'>");
+						}
+					}
+				} else if (i != layerFunction.size() - 1) {
+					if (hasChild)
+						buf
+								.append("<a href='javascript:closeFunction(\"")
+								.append(function.getId())
+								.append("\",\"\")'>")
+								.append(
+										"<img  src='../images/Tree/minus.gif' border='0'>");
+					else
+						buf
+								.append("<a href='javascript:openFunction(\"")
+								.append(function.getId())
+								.append("\",\"\")'>")
+								.append(
+										"<img  src='../images/Tree/plus.gif' border='0'>");
+				} else {
+					isLast[function.getLayer()] = true;
+					if (hasChild)
+						buf
+								.append("<a href='javascript:closeFunction(\"")
+								.append(function.getId())
+								.append("\",\"\")'>")
+								.append(
+										"<img  src='../images/Tree/lastminus.gif' border='0'>");
+					else
+						buf
+								.append("<a href='javascript:openFunction(\"")
+								.append(function.getId())
+								.append("\",\"\")'>")
+								.append(
+										"<img  src='../images/Tree/lastplus.gif' border='0'>");
+				}
+				buf.append("</a>").append("</td>");
+			} else {
+				buf.append("<TD align='left' width='1%'>");
+				if (i == 0 && function.getLayer() == 1)
+					buf
+							.append("<img src='../images/Tree/begindots.gif' border='0'></td>");
+				else if (i != layerFunction.size() - 1)
+					buf
+							.append("<img src='../images/Tree/dots.gif' border='0'></td>");
+				else {
+					isLast[function.getLayer()] = true;
+					buf
+							.append("<img src='../images/Tree/lastdots.gif' border='0'></td>");
+				}
+			}
+
+			buf.append("<td width='").append(100 - function.getLayer()).append(
+					"%' nowrap align='left'>");
+			buf.append("<font size='-1' face='arial'>");
+			if (!hasChild && iterChildFunction.hasNext()) // open/closed
+				buf.append("<b><a href='javascript:openFunction(\"").append(
+						function.getId()).append("\",\"").append(
+						function.getUrl()).append("\")'>").append(
+						function.getName()).append("</a></b>");
+			else if (!"".equals(function.getUrl())
+					&& !"null".equals(function.getUrl())
+					&& function.getUrl() != null)
+				buf.append("<b><a href='").append(function.getUrl()).append(
+						"' target='main'>").append(function.getName()).append(
+						"</a></b>");
+			else
+				buf.append("<b><a href='javascript:closeFunction(\"").append(
+						function.getId()).append("\",\"").append(
+						function.getUrl()).append("\")'>").append(
+						function.getName()).append("</a></b>");
+
+			buf.append("</font>");
+			buf.append("</td>");
+
+			buf.append("</tr>");
+			buf.append("</table>");
+			buf.append("</td></tr>");
+
+			if (hasChild)
+				buf.append(showMenu(menu, function, layer + 1, role, isLast));
+		}
+		return buf.toString();
+	}
+
+	/**
+	 * 显示菜单,只能打开一个菜单
+	 * 
+	 * @param currentFunction
+	 * @param iterFunction
+	 * @param role
+	 * @param LastList
+	 * @return
+	 */
+	public static String showFunctionTree(Function currentFunction,
+			Iterator iterFunction, Role role, boolean[] LastList) {
+
+		Iterator iterChildFunction = RoleFunctionManager.getRoleChildFunction(
+				currentFunction, role);
+		Function function, childFunction = null;
+		StringBuffer buf = new StringBuffer();
+
+		if (iterFunction.hasNext())
+			childFunction = (Function) iterFunction.next();
+
+		boolean isBegin = true;
+		boolean[] isLast;
+		while (iterChildFunction.hasNext()) {
+			isLast = LastList;
+			function = (Function) iterChildFunction.next();
+			if (!function.isMenu())
+				continue;
+			buf.append("<tr align='left'><td></td><td>");
+			buf
+					.append("<table cellpadding='0' cellspacing='0' border='0' width='100%' align='left'>");
+			buf.append("<tr height='5px'>");
+			Iterator sub = FunctionManager.getChildMenu(function);
+
+			for (int i = 1; i < function.getLayer(); i++) {
+				if (isLast[i])
+					buf
+							.append("<td width='1%'><img src='../images/Tree/blank.gif' border='0'></td>");
+				else
+					buf
+							.append("<td width='1%'><img src='../images/Tree/blankdots.gif' border='0'></td>");
+			}
+
+			if (sub.hasNext()) {
+				buf.append("<TD align='left' width='1%'>");
+				buf.append("<a href='javascript:openFunction(\"").append(
+						function.getId()).append("\",\"\")'>");
+				if (isBegin) {
+					if (function.getLayer() == 1) {
+						if (childFunction != null
+								&& function.getId() == childFunction.getId())
+							if (iterChildFunction.hasNext())
+								buf
+										.append("<img  src='../images/Tree/beginminus.gif' border='0'>");
+							else {
+								isLast[function.getLayer()] = true;
+								buf
+										.append("<img  src='../images/Tree/Minubox.gif' border='0'>");
+							}
+						else if (iterChildFunction.hasNext())
+							buf
+									.append("<img  src='../images/Tree/beginplus.gif' border='0'>");
+						else {
+							isLast[function.getLayer()] = true;
+							buf
+									.append("<img  src='../images/Tree/Plusbox.gif' border='0'>");
+						}
+					} else {
+						if (childFunction != null
+								&& function.getId() == childFunction.getId()) {
+							if (iterChildFunction.hasNext())
+								buf
+										.append("<img  src='../images/Tree/minus.gif' border='0'>");
+							else {
+								isLast[function.getLayer()] = true;
+								buf
+										.append("<img  src='../images/Tree/lastminus.gif' border='0'>");
+							}
+						} else if (iterChildFunction.hasNext())
+							buf
+									.append("<img  src='../images/Tree/plus.gif' border='0'>");
+						else {
+							isLast[function.getLayer()] = true;
+							buf
+									.append("<img  src='../images/Tree/lastplus.gif' border='0'>");
+						}
+					}
+				} else if (iterChildFunction.hasNext()) {
+					if (childFunction != null
+							&& function.getId() == childFunction.getId())
+						buf
+								.append("<img  src='../images/Tree/minus.gif' border='0'>");
+					else
+						buf
+								.append("<img  src='../images/Tree/plus.gif' border='0'>");
+				} else {
+					isLast[function.getLayer()] = true;
+					if (childFunction != null
+							&& function.getId() == childFunction.getId())
+						buf
+								.append("<img  src='../images/Tree/lastminus.gif' border='0'>");
+					else
+						buf
+								.append("<img  src='../images/Tree/lastplus.gif' border='0'>");
+				}
+				buf.append("</a>");
+				buf.append("</td>");
+			} else {
+				buf.append("<TD align='left' width='1%'>");
+				if (isBegin && function.getLayer() == 1)
+					buf
+							.append("<img src='../images/Tree/begindots.gif' border='0'></td>");
+				else if (iterChildFunction.hasNext())
+					buf
+							.append("<img src='../images/Tree/dots.gif' border='0'></td>");
+				else {
+					isLast[function.getLayer()] = true;
+					buf
+							.append("<img src='../images/Tree/lastdots.gif' border='0'></td>");
+				}
+			}
+
+			buf.append("<td width='").append(100 - function.getLayer()).append(
+					"%' nowrap align='left'>");
+			buf.append("<font size='-1' face='arial'>");
+			if (sub.hasNext())
+				buf.append("<a href='javascript:openFunction(\"").append(
+						function.getId()).append("\",\"").append(
+						function.getUrl()).append("\")'>").append(
+						function.getName()).append("</a>");
+			else
+				buf.append("<a href='").append(function.getUrl()).append(
+						"' target='main'>").append(function.getName()).append(
+						"</a>");
+			buf.append("</font>");
+			buf.append("</td>");
+
+			buf.append("</tr>");
+			buf.append("</table>");
+			buf.append("</td></tr>");
+
+			if (childFunction != null
+					&& function.getId() == childFunction.getId())
+				buf.append(showFunctionTree(childFunction, iterFunction, role,
+						isLast));
+			isBegin = false;
+		}
+		return buf.toString();
+	}
+
+	/**
+	 * temporarily no use
+	 * 
+	 * @param currentGroup
+	 * @param iterGroup
+	 * @param layer
+	 * @param selectedGroupID
+	 * @param url
+	 * @return
+	 */
+	public static String showGroupTree(GDIndGroup currentGroup,
+			Iterator iterGroup, int layer, long selectedGroupID, String url) {
+		Iterator iterChildGroup = GDIndGroupManager.getChild(currentGroup);
+		// Iterator iterChildGroup =
+		// GroupManager.getSubGroupByGrpID(currentGroup);
+		if (iterChildGroup == null)
+			return "";
+		StringBuffer sbuf = new StringBuffer();
+		GDIndGroup childGroup = null;
+		GDIndGroup group = null;
+		String groupName = "";
+		if (iterGroup.hasNext())
+			childGroup = (GDIndGroup) iterGroup.next();
+		while (iterChildGroup.hasNext()) {
+			group = (GDIndGroup) iterChildGroup.next();
+			sbuf.append("<table cellpadding='2' cellspacing='0' border='0' >");
+			sbuf.append("<tr>");
+			for (int i = 0; i < layer; i++)
+				sbuf
+						.append("<td width='1%'><img src='images/blank.gif' width='12' height='5' border='0'></td>");
+			sbuf
+					.append("<td width='1%'><img src='images/bullet_sm.gif' width='12' height='5' border='0'></td>");
+			if (selectedGroupID == group.getId())
+				sbuf.append("<td width='").append((100 - layer)).append(
+						"%' bgcolor='#eeeeee' nowrap>");
+			else
+				sbuf.append("<td width='").append((100 - layer)).append(
+						"%' nowrap>");
+			sbuf.append("<font size='2' face='arial'>");
+			groupName = group.getGroupName();
+			if (groupName.length() > 7)
+				groupName = groupName.substring(0, 7) + "…";
+			if (group.getLayer() < 8)
+				sbuf
+						.append("<b><a name=\"")
+						.append(group.getId())
+						.append("\"></a>")
+						.append(
+								group.isHasChild() ? "<img src='../images/indexleft_03.gif'>&nbsp;"
+										: "&nbsp;&nbsp;&nbsp;").append(
+								"<a href='").append(url).append("?groupID=")
+						.append(group.getId()).
+						/* append("#").append(group.getId()). */
+						append("'>").append(groupName).append("</a></b>");
+			else
+				sbuf.append(/* group.isHasChild()?"1":"2" + */
+				group.getGroupName());
+			sbuf.append("</font>");
+			sbuf.append("</td>");
+			sbuf.append("</tr>");
+			sbuf.append("</table>");
+			if (childGroup != null && group.getId() == childGroup.getId())
+				sbuf.append(showGroupTree(childGroup, iterGroup, layer + 1,
+						selectedGroupID, url));
+
+		}
+		logger.debug("Group Tree Html:" + sbuf.toString());
+		return sbuf.toString();
+	}
+
+	/**
+	 * 显示组织信息列表，根据当前的人员的角色，当前的组织层次，查找下层组织的列表
+	 * 
+	 * @param currentGroup
+	 * @param iterGroup
+	 * @param layer
+	 * @param selectedGroupID
+	 * @param url
+	 * @return
+	 */
+	public static String showGroupTree(Group currentGroup, Iterator iterGroup,
+			int layer, long selectedGroupID, String url) {
+		logger.debug("当前组织：" + currentGroup.getId() + "-"
+				+ currentGroup.getName() + " Layer:" + layer + " 已选组织："
+				+ selectedGroupID);
+		Iterator<Group> iterChildGroup = GroupManager
+				.getSubGroupByGrpID(currentGroup);
+
+		if (iterChildGroup == null)
+			return "";
+		StringBuffer sbuf = new StringBuffer();
+		Group childGroup = null;
+		Group group = null;
+		String groupName = "";
+		if (iterGroup.hasNext())
+			childGroup = (Group) iterGroup.next();
+		while (iterChildGroup.hasNext()) {
+			group = (Group) iterChildGroup.next();
+			sbuf.append("<table cellpadding='2' cellspacing='0' border='0' >");
+			sbuf.append("<tr>");
+			for (int i = 0; i < layer; i++)
+				sbuf
+						.append("<td width='1%'><img src='images/blank.gif' width='12' height='5' border='0'></td>");
+			sbuf
+					.append("<td width='1%'><img src='images/bullet_sm.gif' width='12' height='5' border='0'></td>");
+			if (selectedGroupID == group.getId())
+				sbuf.append("<td width='").append((100 - layer)).append(
+						"%' bgcolor='#eeeeee' nowrap>");
+			else
+				sbuf.append("<td width='").append((100 - layer)).append(
+						"%' nowrap>");
+			sbuf.append("<font size='2' face='arial'>");
+			groupName = group.getName();
+
+			sbuf
+					.append("<b><a name=\"")
+					.append(group.getId())
+					.append("\"></a>")
+					.append(
+							group.isHasChild() ? "<img src='../images/indexleft_03.gif'>&nbsp;"
+									: "&nbsp;&nbsp;&nbsp;").append("<a href='")
+					.append(url).append("?groupID=").append(group.getId())
+					.append("&groupname=").append(groupName).append("'>")
+					.append(groupName).append("</a></b>");
+			sbuf.append("</font>");
+			sbuf.append("</td>");
+			sbuf.append("</tr>");
+			sbuf.append("</table>");
+			if (childGroup != null && group.getId() == childGroup.getId())
+				sbuf.append(showGroupTree(childGroup, iterGroup, layer + 1,
+						selectedGroupID, url));
+
+		}
+		logger.debug("Group Tree Html:" + sbuf.toString());
+		return sbuf.toString();
+	}
+
+	/**
+	 * 取得组织树，考虑挂靠情况，有些部门有挂靠关系，并不完全按照部门层级关系展现
+	 * 
+	 * @param currentGroup
+	 * @param iterGroup
+	 * @param layer
+	 * @param selectedGroupID
+	 * @param url
+	 * @return
+	 */
+	public static String showLinkedGroupTree(Group currentGroup,
+			Iterator iterGroup, int layer, long selectedGroupID, String url) {
+		Iterator iterChildGroup = GroupManager
+				.getChildNoDelAndLinkedGroup(currentGroup.getId());
+		if (iterChildGroup == null)
+			return "";
+		StringBuffer sbuf = new StringBuffer();
+		Group childGroup = null;
+		Group group = null;
+		String groupName = "";
+		String groupFullName = "";
+		if (iterGroup.hasNext())
+			childGroup = (Group) iterGroup.next();
+		while (iterChildGroup.hasNext()) {
+			group = (Group) iterChildGroup.next();
+			sbuf.append("<table cellpadding='2' cellspacing='0' border='0' >");
+			sbuf.append("<tr>");
+			for (int i = 0; i < layer; i++)
+				sbuf
+						.append("<td width='1%'><img src='images/blank.gif' width='12' height='5' border='0'></td>");
+			sbuf
+					.append("<td width='1%'><img src='images/bullet_sm.gif' width='12' height='5' border='0'></td>");
+			if (selectedGroupID == group.getId())
+				sbuf.append("<td width='").append((100 - layer)).append(
+						"%' bgcolor='#eeeeee' nowrap>");
+			else
+				sbuf.append("<td width='").append((100 - layer)).append(
+						"%' nowrap>");
+			// sbuf.append("<font size='2' face='arial'>");
+			groupName = group.getName();
+			groupFullName = group.getName();
+			if (groupName.length() > 16)
+				groupName = groupName.substring(0, 16) + "…";
+			if (group.getLayer() < 15)
+				sbuf
+						.append("<b><a name=\"")
+						.append(group.getId())
+						.append("\"></a>")
+						.append(
+								group.isHasChild() ? "<img src='../images/indexleft_03.gif'>&nbsp;"
+										: "&nbsp;&nbsp;&nbsp;").append(
+								"<a href='").append(url).append("?groupID=")
+						.append(group.getId()).
+						/* append("#").append(group.getId()). */
+						append("' title='" + groupFullName + "'>").append(
+								groupName).append("</a></b>");
+			else
+				sbuf.append(/* group.isHasChild()?"1":"2" + */
+				group.getName());
+			sbuf.append("</font>");
+			sbuf.append("</td>");
+			sbuf.append("</tr>");
+			sbuf.append("</table>");
+			if (childGroup != null && group.getId() == childGroup.getId())
+				sbuf.append(showLinkedGroupTree(childGroup, iterGroup,
+						layer + 1, selectedGroupID, url));
+
+		}
+		return sbuf.toString();
+	}
+
+	/**
+	 * 组织用户树
+	 * 
+	 * add by zmk
+	 * 
+	 * @date 2005-11-28
+	 */
+	// public static String showGroupUserTree(Group currentGroup,
+	// Iterator iterGroup, int layer, long selectedGroupID, String url) {
+	//
+	// Iterator iterChildGroup = GroupManager.getChildNoDel(currentGroup);
+	// if (iterChildGroup == null)
+	// return "";
+	// StringBuffer sbuf = new StringBuffer();
+	// Group childGroup = null;
+	// Group group = null;
+	// String groupName = "";
+	//
+	// if (iterGroup.hasNext())
+	// childGroup = (Group) iterGroup.next();
+	//
+	// while (iterChildGroup.hasNext()) {
+	// group = (Group) iterChildGroup.next();
+	//
+	// for (int i = 0; i < layer; i++)
+	//
+	// groupName = group.getName();
+	// UserManager userManager = UserManager.getInstance();
+	// if (groupName.length() > 7)
+	// groupName = groupName.substring(0, 7) + "…";
+	// if (group.getLayer() < 8) {
+	// sbuf.append("var g" + group.getId()
+	// + "=tree1.addChkNode(root,\"" + groupName + "\")\n");
+	//
+	// Iterator iter = userManager.groupUserNoDel(group.getId());
+	// User user = null;
+	// int k = 0;
+	// while (iter.hasNext()) {
+	// k++;
+	// user = (User) iter.next();
+	// sbuf.append(" tree1.addChkNode(g" + group.getId() + ",\""
+	// + user.getName() + "\")\n");
+	// }
+	// if (group.isHasChild()) // 如果部门下面还有科室
+	// {
+	// Iterator iterChild = GroupManager.getChildNoDel(group);
+	// while (iterChild.hasNext()) {
+	// childGroup = (Group) iterChild.next();
+	// sbuf.append("var g2" + group.getId()
+	// + "=tree1.addChkNode(g" + group.getId() + ",\""
+	// + childGroup.getName() + "\")\n");
+	//
+	// Iterator iterChildUser = userManager
+	// .groupUser(childGroup.getId());
+	// User childUser = null;
+	//
+	// while (iterChildUser.hasNext()) {
+	//
+	// childUser = (User) iterChildUser.next();
+	// sbuf.append(" tree1.addChkNode(g2" + group.getId()
+	// + ",\"" + childUser.getName() + "\")\n");
+	// }
+	// }
+	//
+	// }
+	// }
+	//
+	// }
+	// return sbuf.toString();
+	// }
+	/**
+	 * 
+	 * @param currentFunction
+	 * @param iterFunction
+	 * @param depth
+	 * @param selectedFunctionid
+	 * @return
+	 */
+	public static String showFunctionTree(Function currentFunction,
+			Iterator iterFunction, int depth, int selectedFunctionid) {
+
+		Iterator iterChildFunction = FunctionManager.getChild(currentFunction);
+		Function functionObj;
+		Function childFunction = null;
+		StringBuffer buf = new StringBuffer();
+
+		if (iterFunction.hasNext())
+			childFunction = (Function) iterFunction.next();
+
+		while (iterChildFunction.hasNext()) {
+			functionObj = (Function) iterChildFunction.next();
+			if (!functionObj.isMenu())
+				continue;
+			buf
+					.append("<table cellpadding='2' cellspacing='0' border='0' width='100%'>");
+			buf.append("<tr>");
+			for (int i = 0; i < depth; i++)
+				buf
+						.append("<td width='1%'><img src='../images/blank.gif' width='12' height='5' border='0'></td>");
+			buf
+					.append("<td width='1%'><img src='images/bullet_sm.gif' width='12' height='5' border='0'></td>");
+			if (selectedFunctionid == functionObj.getId())
+				buf.append("<td width='").append((100 - depth)).append(
+						"%' bgcolor='#E8F4F4' nowrap>");
+			else
+				buf.append("<td width='").append((100 - depth)).append(
+						"%' nowrap>");
+			buf.append("<font size='-1' face='arial'>");
+			buf.append("<a name=\"").append(functionObj.getId()).append(
+					"\"></a><a href='functions.jsp?id=").append(
+					functionObj.getId()).append("#")
+					.append(functionObj.getId()).append("'>").append(
+							functionObj.getName()).append("</a>");
+			buf.append("</font>");
+			buf.append("</td>");
+			buf.append("</tr>");
+			buf.append("</table>");
+
+			if (childFunction != null
+					&& functionObj.getId() == childFunction.getId())
+				buf.append(showFunctionTree(childFunction, iterFunction,
+						depth + 1, selectedFunctionid));
+		}
+		return buf.toString();
+	}
+
+	// roles.jsp
+	/**
+	 * 
+	 */
+	public static String showRoleTree(Role currentRole, Iterator iterRole,
+			int depth, long selectRoleID) {
+		Iterator iterChildRole = RoleManager.getAllRole();
+		Role role;
+		StringBuffer buf = new StringBuffer();
+
+		while (iterChildRole.hasNext()) {
+			role = (Role) iterChildRole.next();
+			buf
+					.append("<table cellpadding='2' cellspacing='0' border='0' width='100%'>");
+			buf.append("<tr>");
+			for (int i = 0; i < depth; i++)
+				buf
+						.append("<td width='1%'><img src='../images/blank.gif' width='12' height='5' border='0'></td>");
+			buf
+					.append("<td width='1%'><img src='../images/bullet_sm.gif' width='12' height='5' border='0'></td>");
+			if (selectRoleID == role.getId())
+				buf.append("<td width='").append(100 - depth).append(
+						"%' color='red' nowrap >");
+			else
+				buf.append("<td width='").append(100 - depth).append(
+						"%' nowrap>");
+			buf.append("<font size='-1' face='arial'>");
+			buf.append("<a name=\"").append(role.getId()).append(
+					"\"></a><a href='roles.jsp?roleid=").append(role.getId())
+					.append("'>").append(role.getName()).append("</a>");
+			buf.append("</font>");
+			buf.append("</td>");
+			buf.append("</tr>");
+			buf.append("</table>");
+
+			// if (childRole != null && role.getId() == childRole.getId())
+			// buf.append(showRoleTree(childRole, iterRole, depth + 1,
+			// selectRoleID));
+		}
+		logger.debug("Role Tree buf:" + buf.toString());
+
+		return buf.toString();
+	}
+
+	/**
+	 * 用户多角色菜单
+	 * 
+	 * add by zmk 2006-01-22
+	 */
+	public static String showUserRoleTree(Role currentRole, Iterator iterRole,
+			int depth, long selectRoleID) {
+		Iterator iterChildRole = RoleManager.getChild(currentRole);
+		Role role;
+		Role childRole = null;
+		StringBuffer buf = new StringBuffer();
+
+		if (iterRole.hasNext())
+			childRole = (Role) iterRole.next();
+
+		while (iterChildRole.hasNext()) {
+			role = (Role) iterChildRole.next();
+			buf
+					.append("<table cellpadding='2' cellspacing='0' border='0' width='100%'>");
+			buf.append("<tr>");
+			for (int i = 0; i < depth; i++)
+				buf
+						.append("<td width='1%'><img src='../images/blank.gif' width='12' height='5' border='0'></td>");
+			buf
+					.append("<td width='1%'><img src='../images/bullet_sm.gif' width='12' height='5' border='0'></td>");
+			if (selectRoleID == role.getId())
+				buf.append("<td width='").append(100 - depth).append(
+						"%' bgcolor='#E8F4F4' nowrap>");
+			else
+				buf.append("<td width='").append(100 - depth).append(
+						"%' nowrap>");
+			buf.append("<font size='-1' face='arial'>");
+			buf.append("<b><a name=\"").append(role.getId()).append(
+					"\"></a><a href='usersRoles.jsp?roleId=").append(
+					role.getId())
+			/*
+			 * .append("#") .append(role.getId())
+			 */
+			.append("'>").append(role.getName()).append("</a></b>");
+			buf.append("</font>");
+			buf.append("</td>");
+			buf.append("</tr>");
+			buf.append("</table>");
+
+			if (childRole != null && role.getId() == childRole.getId())
+				buf.append(showUserRoleTree(childRole, iterRole, depth + 1,
+						selectRoleID));
+		}
+		return buf.toString();
+	}
+
+	public static String showFunctionTree(User loginUser,
+			Function currentFunction, Iterator iterFunction, int depth,
+			long selectFunctionID, Role selectedRole, boolean has)
+			throws ApplicationException {
+
+		Iterator iterChildFunction, subFunction;
+		if (has)
+			iterChildFunction = RoleFunctionManager.getRoleChildFunction(
+					currentFunction, selectedRole);
+		else
+			iterChildFunction = RoleFunctionManager.getRoleNonChildFunction(
+					loginUser, currentFunction, selectedRole);
+		logger.debug("RoleID:" + selectedRole.getId() + selectedRole.getName()
+				+ " curr function:" + currentFunction.toString() + " 子菜单："
+				+ iterChildFunction);
+		Function function;
+		Function childFunction = null;
+		StringBuffer buf = new StringBuffer();
+
+		if (iterFunction.hasNext())
+			childFunction = (Function) iterFunction.next();
+
+		while (iterChildFunction.hasNext()) {
+			function = (Function) iterChildFunction.next();
+			buf.append("<table cellpadding='2' cellspacing='0' border='0' width='100%'>");
+			buf.append("<tr>");
+			for (int i = 0; i < depth; i++)
+				buf.append("<td width='1%'><img src='../images/blank.gif' width='12' height='5' border='0'></td>");
+			
+			buf.append("<td width='1%'><img src='../images/bullet_sm.gif' width='12' height='5' border='0'></td>");
+			if (selectFunctionID == function.getId())
+				buf.append("<td width='").append((100 - depth)).append(
+						"%' bgcolor='#E8F4F4' nowrap>");
+			else
+				buf.append("<td width='").append((100 - depth)).append(
+						"%' nowrap>");
+			buf.append("<font size='-1' face='arial'>");
+			subFunction = RoleFunctionManager.getRoleChildFunction(function,selectedRole);
+
+			if (has) {
+				// subFunction =
+				// RoleFunctionManager.getRoleChildFunction(function, role);
+				// if (subFunction.hasNext())
+				if (function.isHasChild())
+					buf.append("<a href='roles.jsp?roleid=").append(
+							selectedRole.getId()).append("&selectFunctionID=").append(
+							function.getId()).append("'>").append(
+							function.getName()).append("</a>");
+				else
+					buf.append("").append(function.getName()).append("");
+			} else {
+				// subFunction =
+				// RoleFunctionManager.getRoleNonChildFunction(loginUser,
+				// function, role);
+				// if (subFunction.hasNext())
+				if (function.isHasChild())
+					buf.append("<a href='roles.jsp?roleid=").append(selectedRole.getId())
+							.append("&selectNonFunctionID=").append(
+									function.getId()).append("'>").append(
+									function.getName()).append("</a>");
+				else
+					buf.append("").append(function.getName()).append("");
+			}
+			buf.append("</font>");
+			buf.append("</td>");
+			if (has)
+				buf.append(	"<td width='1%'><input type='checkbox' name='functionRemoveSelect' value='").append(function.getId()).append("'></td>");
+			else
+				buf.append("<td width='1%'><input type='checkbox' name='functionAddSelect' value='").append(function.getId()).append("'></td>");
+			buf.append("</tr>");
+			buf.append("</table>");
+
+			if (childFunction != null
+					&& function.getId() == childFunction.getId())
+				buf.append(showFunctionTree(loginUser, childFunction,
+						iterFunction, depth + 1, selectFunctionID, selectedRole, has));
+		}
+		logger.debug("菜单列表： " + buf);
+		return buf.toString();
+	}
+
+	public static String showGroupFunctionTree(User loginUser,
+			Function currentFunction, Iterator iterFunction, int depth,
+			long selectFunctionID, Group group, boolean has) {
+		Iterator iterChildFunction, subFunction;
+		if (has)
+			iterChildFunction = GroupFunctionManager.getGroupChildFunction(
+					currentFunction, group);
+		else
+			iterChildFunction = GroupFunctionManager.getGroupNonChildFunction(loginUser, currentFunction, group);
+		Function function;
+		Function childFunction = null;
+		StringBuffer buf = new StringBuffer();
+
+		if (iterFunction.hasNext())
+			childFunction = (Function) iterFunction.next();
+
+		while (iterChildFunction.hasNext()) {
+			function = (Function) iterChildFunction.next();
+			buf.append("<table cellpadding='2' cellspacing='0' border='0' width='100%'>");
+			buf.append("<tr>");
+			for (int i = 0; i < depth; i++)
+				buf.append("<td width='1%'><img src='../images/blank.gif' width='12' height='5' border='0'></td>");
+				buf.append("<td width='1%'><img src='../images/bullet_sm.gif' width='12' height='5' border='0'></td>");
+				if (selectFunctionID == function.getId())
+					buf.append("<td width='").append((100 - depth)).append("%' bgcolor='#E8F4F4' nowrap>");
+				else
+					buf.append("<td width='").append((100 - depth)).append("%' nowrap>");
+					
+				buf.append("<font size='-1' face='arial'>");
+				subFunction = GroupFunctionManager.getGroupChildFunction(function,group);
+	
+				if (has) {
+					subFunction = GroupFunctionManager.getGroupChildFunction(function, group);
+					if (subFunction.hasNext())
+						buf.append("<b><a href='groupfunction.jsp?groupID=").append(group.getId()).append("&selectFunctionID=").append(function.getId()).append("'>").append(function.getName()).append("</a></b>");
+					else
+						buf.append("<b>").append(function.getName()).append("</b>");
+				} else {
+					subFunction = GroupFunctionManager.getGroupNonChildFunction(loginUser, function, group);
+					if (subFunction.hasNext())
+						buf.append("<b><a href='groupfunction.jsp?groupID=").append(group.getId()).append("&selectNonFunctionID=").append(function.getId()).append("'>").append(function.getName()).append("</a></b>");
+					else
+						buf.append("<b>").append(function.getName()).append("</b>");
+				}
+				buf.append("</font>");
+				buf.append("</td>");
+				if (has)
+					buf.append("<td width='1%'><input type='checkbox' name='functionRemoveSelect' value='").append(function.getId()).append("'></td>");
+				else
+					buf.append("<td width='1%'><input type='checkbox' name='functionAddSelect' value='").append(function.getId()).append("'></td>");
+				buf.append("</tr>");
+				buf.append("</table>");
+				
+				if (childFunction != null
+						&& function.getId() == childFunction.getId())
+					buf.append(showGroupFunctionTree(loginUser, childFunction,iterFunction, depth + 1, selectFunctionID, group, has));
+		}
+		return buf.toString();
+	}
+
+	public static String showGroupList(long groupId, long selectGroupId) {
+		StringBuffer buf = new StringBuffer();
+		Iterator iter = GroupManager.getSubGroupByGrpID(groupId);
+		Group childGroup = null;
+		while (iter.hasNext()) {
+			childGroup = (Group) iter.next();
+			if (selectGroupId == childGroup.getId())
+				buf.append("<option value='").append(childGroup.getId())
+						.append("' SELECTED>");
+			else
+				buf.append("<option value='").append(childGroup.getId())
+						.append("'>");
+
+			for (int i = 0; i < childGroup.getLayer(); i++)
+				buf.append("&nbsp;&nbsp;&nbsp;");
+
+			buf.append("&#149;").append(childGroup.getName());
+
+			// if(selectGroupId==childGroup.getId())
+			// buf.append("(当前)");
+			buf.append("</option>");
+			buf.append(showGroupList(childGroup.getId(), selectGroupId));
+		}
+		return buf.toString();
+	}
+
+	public static String showGroupList2(long groupId, long selectGroupId) {
+		StringBuffer buf = new StringBuffer();
+		Iterator iter = GroupManager.getChildNoDel(groupId);
+		Group childGroup = null;
+		while (iter.hasNext()) {
+			childGroup = (Group) iter.next();
+			if (selectGroupId == childGroup.getId())
+				buf.append("<option value='").append(childGroup.getId())
+						.append("' SELECTED>");
+			else
+				buf.append("<option value='").append(childGroup.getId())
+						.append("'>");
+
+			for (int i = 0; i < childGroup.getLayer(); i++)
+				buf.append("&nbsp;&nbsp;&nbsp;");
+
+			buf.append("&#149;").append(childGroup.getName());
+
+			// if(selectGroupId==childGroup.getId())
+			// buf.append("(当前)");
+			buf.append("</option>");
+		}
+		return buf.toString();
+	}
+
+	public static String showGroupList(long groupId, long selectGroupId,
+			boolean isFirst) {
+		StringBuffer buf = new StringBuffer();
+		Iterator iter = GroupManager.getSubGroupByGrpID(groupId); // 取得下级所有部门
+		Group childGroup = null;
+		if (isFirst) {
+			childGroup = GroupManager.getGroupByID(groupId);
+			if (selectGroupId == childGroup.getId())
+				buf.append("<option value='").append(childGroup.getId())
+						.append("' SELECTED>");
+			else
+				buf.append("<option value='").append(childGroup.getId())
+						.append("'>");
+			buf.append("&#149;").append(childGroup.getName());
+			buf.append("</option>");
+		}
+		while (iter.hasNext()) {
+			childGroup = (Group) iter.next();
+			if (selectGroupId == childGroup.getId())
+				buf.append("<option value='").append(childGroup.getId())
+						.append("' SELECTED>");
+			else
+				buf.append("<option value='").append(childGroup.getId())
+						.append("'>");
+
+			for (int i = 0; i < childGroup.getLayer(); i++)
+				buf.append("&nbsp;&nbsp;&nbsp;");
+
+			buf.append("&#149;").append(childGroup.getName());
+
+			// if(selectGroupId==childGroup.getId())
+			// buf.append("(当前)");
+			buf.append("</option>");
+			buf.append(showGroupList(childGroup.getId(), selectGroupId, false));
+		}
+		return buf.toString();
+	}
+
+	public static String showL2GroupList(long selectGroupId, boolean isFirst) {
+		int groupId = 1;
+		StringBuffer buf = new StringBuffer();
+		Iterator iter = GroupManager.getChildNoDel(groupId); // 取得下级所有部门
+		Group childGroup = null;
+		if (isFirst) {
+			childGroup = GroupManager.getGroupByID(groupId);
+			if (selectGroupId == childGroup.getId())
+				buf.append("<option value='").append(childGroup.getId())
+						.append("' SELECTED>");
+			else
+				buf.append("<option value='").append(childGroup.getId())
+						.append("'>");
+			buf.append("&#149;").append(childGroup.getName());
+			buf.append("</option>");
+		}
+		while (iter.hasNext()) {
+			childGroup = (Group) iter.next();
+			if (selectGroupId == childGroup.getId())
+				buf.append("<option value='").append(childGroup.getId())
+						.append("' SELECTED>");
+			else
+				buf.append("<option value='").append(childGroup.getId())
+						.append("'>");
+
+			for (int i = 0; i < childGroup.getLayer(); i++)
+				buf.append("&nbsp;&nbsp;&nbsp;");
+
+			buf.append("&#149;").append(childGroup.getName());
+
+			// if(selectGroupId==childGroup.getId())
+			// buf.append("(当前)");
+			buf.append("</option>");
+			// buf.append(showGroupList(childGroup.getId(), selectGroupId,
+			// false));
+		}
+		return buf.toString();
+	}
+
+	public static String showMenu(Function function, User user, String preString)
+			throws ApplicationException {
+		int layer = function.getLayer();
+		String oaServer = Globals.getProperty("server.ldap_server");
+		String webServer = Globals.getProperty("server.web_server");
+		Role role = RoleManager.getRole(user.getRoleID());
+		StringBuffer strMenu = new StringBuffer();
+		String prefix;
+		String strURL = "", strTarget = "", strModule = "", strURLName = "";
+		Iterator tmpIterFunction;
+		Function tmpFunction;
+		if (function.isHasChild()) {
+			if (function.getId() != 1) {
+				strMenu.append(preString + "<span height=18>");
+				strMenu
+						.append("<a href=\"javascript:ShowOrHide('"
+								+ function.getId()
+								+ "')\">"
+								+ (layer == 1 ? "<strong>" : "")
+								+ "<img name=\"img"
+								+ function.getId()
+								+ "\" border=\"0\" src=\"../images/indexleft_03.gif\">&nbsp;"
+								+ function.getName()
+								+ (layer == 1 ? "</strong>" : "")
+								+ "</a></span><br>\n");
+				strMenu.append("<div class='clsMenu' id='sFunction"
+						+ function.getId() + "'>\n");
+			}
+			tmpIterFunction = RoleFunctionManager.getRoleChildFunction(
+					function, role);
+			while (tmpIterFunction.hasNext()) {
+				tmpFunction = (Function) tmpIterFunction.next();
+				if (function.getId() != 1) {
+					prefix = preString + "&nbsp;&nbsp;&nbsp;";
+				} else {
+					prefix = preString;
+				}
+				strMenu.append(showMenu(tmpFunction, user, prefix));
+			}
+			if (function.getId() != 1) {
+				strMenu.append("</div>\n");
+			}
+		} else {
+
+			if (function.getModuleId() != 0) {
+				strURL = function.getUrl()
+						+ (function.getUrl().indexOf("?") > 0 ? "&" : "?")
+						+ "MODULEID=" + function.getModuleId();
+			} else {
+				strURL = function.getUrl();
+			}
+			strURL = StrUtil.replace(strURL, "#oaserver#", oaServer);
+			strURL = StrUtil.replace(strURL, "#webserver#", webServer);
+			strTarget = function.isNewWindow() ? " target=\"_blank\""
+					: " target=\"main\"";
+			// target="_blank"或者 target="main"
+			strURLName = (layer == 1 ? "<strong>" : "") + function.getName()
+					+ (layer == 1 ? "</strong>" : "");
+
+			strMenu.append(preString + "&nbsp;&nbsp;<span height=18>");
+			strMenu.append("<a href=\"" + strURL + "\"" + strTarget + ">"
+					+ strURLName + "</a>");
+			strMenu.append("</span><br>\n");
+		}
+		return strMenu.toString();
+	}
+
+	public static String showMenu(Function function, User user,
+			String preString, int cityID, boolean isRoot, int realLay)
+			throws ApplicationException {
+		int layer = function.getLayer();
+		String projectName = Globals.getProperty("server.web_project");
+		Role role = RoleManager.getRole(user.getRoleID());
+		StringBuffer strMenu = new StringBuffer();
+		String prefix; /* 菜单前缀 */
+		String strURL = ""; /* 菜单链接 */
+		String strURLName = ""; /* 菜单URL显示的名称 */
+		String strTarget = ""; /* 菜单是否打开新窗口 */
+		String check = "0"; /* 是否第一层菜单 0--第一层 1--非第一层 */
+		Iterator tmpIterFunction; /* 临时功能列表，用于递归 */
+		Function tmpFunction; /* 临时功能对象，用于表示功能 */
+
+		strURLName = function.getName();
+
+		if (function.isHasChild()) /* 对拥有子菜单的菜单进行处理 */{
+			if (!isRoot) {
+				// 设置第一层菜单名称显示，第一层加<Strong>显示，并指定图片
+				if (function.getLayer() - realLay == 1) {
+					// strURLName = "<strong><img name=\"img" + function.getId()
+					// + "\" border=\"0\" src=\"../images/ico1.gif\">&nbsp;" +
+					// function.getName() + "</strong>";
+					strURLName = "<strong><img name=\"img" + function.getId()
+							+ "\" border=\"0\" src=\"images/ico1.gif\">&nbsp;"
+							+ function.getName() + "</strong>";
+					check = "0";
+				} else {
+					// strURLName = "<img name=\"img" + function.getId() + "\"
+					// border=\"0\" src=\"../images/ico2.gif\">&nbsp;" +
+					// function.getName();
+					strURLName = "<img name=\"img" + function.getId()
+							+ "\" border=\"0\" src=\"images/ico2.gif\">&nbsp;"
+							+ function.getName();
+					check = "1";
+				}
+
+				// 菜单表现，设定锚点，锚点名为功能ID
+				strMenu.append("<a name=" + function.getId() + "></a>");
+				strMenu.append(preString);
+				strMenu.append("<a href=#" + function.getId()
+						+ " onclick=\"javascript:ShowOrHide('"
+						+ function.getId() + "'," + check + ")\">");
+				strMenu.append("<span id='menu" + function.getId()
+						+ "' height=18>");
+				strMenu.append(strURLName);
+				strMenu.append("</span>");
+				strMenu.append("</a><br>\n");
+
+				// 可以折叠，对其子菜单放入该层
+				strMenu.append("<div class='clsMenu' id='sFunction"
+						+ function.getId() + "'>\n");
+			}
+			tmpIterFunction = RoleFunctionManager.getRoleChildFunction(
+					function, role);
+			while (tmpIterFunction.hasNext()) {
+				tmpFunction = (Function) tmpIterFunction.next();
+				// 处理菜单前缀，进行显示
+				if (!isRoot) {
+					prefix = preString + "&nbsp;&nbsp;&nbsp;";
+				} else {
+					prefix = preString;
+				}
+				// 把构造好的功能菜单字符串加入到菜单字符缓冲流中，并递归
+				strMenu.append(showMenu(tmpFunction, user, prefix, cityID,
+						false, realLay));
+			}
+			if (!isRoot) {
+				strMenu.append("</div>\n");
+			}
+		} else {
+			/* 对没有子菜单的菜单进行处理 */
+
+			boolean isAssignFun = false;
+
+			String strFlowIDs = "";
+			// FlowConfig flow = null;
+			int startNodeID = 0;
+			if (function.getModuleId() != 0) {
+				/*
+				 * // Marked by George 2008-08-04 Iterator iterFlow =
+				 * FlowConfigManager.getFlowByModuleID(function.getModuleId());
+				 * while (iterFlow.hasNext()) { flow = (FlowConfig)
+				 * iterFlow.next(); if (strFlowIDs.equals("")) strFlowIDs =
+				 * Integer.toString(flow.getFlowID()); else strFlowIDs =
+				 * strFlowIDs + "," + Integer.toString(flow.getFlowID());
+				 * startNodeID = flow.getStartNode(); // if (startNodeID == 0 ||
+				 * UserNodeManager.isAssign((int) // user.getId(), startNodeID)) //
+				 * .nsf表示的是这个URL链接到DOMINO服务器中去！ isAssignFun = true; } Marked by
+				 * George 2008-08-04
+				 */
+				strURL = function.getUrl()
+						+ (function.getUrl().indexOf("?") > 0 ? "&" : "?")
+						+ "MODULEID=" + function.getModuleId() + "&flowIDs="
+						+ strFlowIDs + "&userID=" + user.getId();
+
+			} else {
+				strURL = function.getUrl();
+				isAssignFun = true;
+			}
+			isAssignFun = true;
+			strURL = StrUtil.replace(strURL, "#webproject#", projectName);
+
+			/* 处理菜单 */
+			if (isAssignFun) {
+				try {
+					ArrayList serverList = CityManager.getGDCity(cityID)
+							.getServerList();
+					String serverType, serverName;
+					// System.out.println(serverList);
+					ServerConfig server;
+					for (int i = 0; i < serverList.size(); i++) {
+						server = (ServerConfig) serverList.get(i);
+						serverType = server.getServerType().toLowerCase();
+						serverName = server.getDomName();
+						// System.out.println("serer type:" + serverType);
+						// System.out.println(strURL);
+						if (strURL.indexOf("#" + serverType + "#") >= 0) {
+							strURL = StrUtil.replace(strURL, "#" + serverType
+									+ "#", serverName);
+							break;
+						}
+					}
+				} catch (Exception ex) {
+					System.out.print(ex);
+				}
+
+				// 判断是否在新窗口打开
+				strTarget = function.isNewWindow() ? " target=\"_blank\""
+						: " target=\"main\"";
+				/*
+				 * if(function.getLayer() - realLay ==1){ strURLName = "
+				 * <strong> <img border=\"0\" src=\"../images/ico1.gif\">&nbsp;" +
+				 * strURLName + " </strong>"; strMenu.append(" <span id='menu'" +
+				 * function.getId() + " height=18>" + preString); }else{
+				 * strMenu.append(" <span id='menu'" + function.getId() + "
+				 * height=18>&nbsp;&nbsp;&nbsp;" + preString); }
+				 * 
+				 * strMenu.append(" <a href=\"" + strURL + "\"" + strTarget +
+				 * ">" + strURLName + " </a>"); strMenu.append(" </span> <br>
+				 * \n");
+				 */
+				// new
+				if (function.getLayer() - realLay == 1) {
+					// strURLName = "<strong><img border=\"0\"
+					// src=\"../images/ico1.gif\">&nbsp;" + strURLName +
+					// "</strong>";
+					strURLName = "<strong><img border=\"0\" src=\"images/ico1.gif\">&nbsp;"
+							+ strURLName + "</strong>";
+					strMenu.append(preString);
+				} else {
+					strMenu.append("&nbsp;&nbsp;&nbsp;" + preString);
+				}
+				strURLName = "<span id='menu" + function.getId()
+						+ "' height=18>" + strURLName + "</span>";
+				strMenu.append("<a href=\"" + strURL + "\"" + strTarget
+						+ " onclick=\"javascript:changeColor('menu"
+						+ function.getId() + "')\">" + strURLName
+						+ "</a><br>\n");
+			}
+		}
+		return strMenu.toString();
+	}
+
+	/**
+	 * 在原来菜单的基础上增加用户多角色功能菜单
+	 * 
+	 * 
+	 */
+	public static String showMenu(Function function, User user,
+			String preString, int cityID, boolean isRoot, int realLay,
+			long userId) throws ApplicationException {
+		int layer = function.getLayer();
+		String projectName = Globals.getProperty("server.web_project");
+		Role role = RoleManager.getRole(user.getRoleID());
+		StringBuffer strMenu = new StringBuffer();
+		String prefix; /* 菜单前缀 */
+		String strURL = ""; /* 菜单链接 */
+		String strURLName = ""; /* 菜单URL显示的名称 */
+		String strTarget = ""; /* 菜单是否打开新窗口 */
+		String check = "0"; /* 是否第一层菜单 0--第一层 1--非第一层 */
+		Iterator tmpIterFunction; /* 临时功能列表，用于递归 */
+		Function tmpFunction; /* 临时功能对象，用于表示功能 */
+
+		strURLName = function.getName();
+
+		if (function.isHasChild()) /* 对拥有子菜单的菜单进行处理 */{
+			if (!isRoot) {
+				// 设置第一层菜单名称显示，第一层加<Strong>显示，并指定图片
+				if (function.getLayer() - realLay == 1) {
+					strURLName = "<strong><img name=\"img" + function.getId()
+							+ "\" border=\"0\" src=\"images/ico1.gif\">&nbsp;"
+							+ function.getName() + "</strong>";
+					check = "0";
+				} else {
+
+					strURLName = "<img name=\"img" + function.getId()
+							+ "\" border=\"0\" src=\"images/ico2.gif\">&nbsp;"
+							+ function.getName();
+					check = "1";
+				}
+
+				// 菜单表现，设定锚点，锚点名为功能ID
+				strMenu.append("<a name=" + function.getId() + "></a>");
+				strMenu.append(preString);
+				strMenu.append("<a href=#" + function.getId()
+						+ " onclick=\"javascript:ShowOrHide('"
+						+ function.getId() + "'," + check + ")\">");
+				strMenu.append("<span id='menu" + function.getId()
+						+ "' height=18>");
+				strMenu.append(strURLName);
+				strMenu.append("</span>");
+				strMenu.append("</a><br>\n");
+
+				// 可以折叠，对其子菜单放入该层
+				strMenu.append("<div class='clsMenu' id='sFunction"
+						+ function.getId() + "'>\n");
+			}
+			tmpIterFunction = RoleFunctionManager.getRoleChildFunction(
+					function, role, userId);
+			while (tmpIterFunction.hasNext()) {
+				tmpFunction = (Function) tmpIterFunction.next();
+				// 处理菜单前缀，进行显示
+				if (!isRoot) {
+					prefix = preString + "&nbsp;&nbsp;&nbsp;";
+				} else {
+					prefix = preString;
+				}
+				// 把构造好的功能菜单字符串加入到菜单字符缓冲流中，并递归
+				strMenu.append(showMenu(tmpFunction, user, prefix, cityID,
+						false, realLay, userId));
+			}
+			if (!isRoot) {
+				strMenu.append("</div>\n");
+			}
+		} else {/* 对没有子菜单的菜单进行处理 */
+			boolean isAssignFun = false;
+			String strFlowIDs = "";
+			// FlowConfig flow = null;
+			int startNodeID = 0;
+			if (function.getModuleId() != 0) {
+				/*
+				 * Iterator iterFlow =
+				 * FlowConfigManager.getFlowByModuleID(function.getModuleId());
+				 * while (iterFlow.hasNext()) { flow = (FlowConfig)
+				 * iterFlow.next(); if (strFlowIDs.equals("")) strFlowIDs =
+				 * Integer.toString(flow.getFlowID()); else strFlowIDs =
+				 * strFlowIDs + "," + Integer.toString(flow.getFlowID());
+				 * startNodeID = flow.getStartNode(); // if (startNodeID == 0 ||
+				 * UserNodeManager.isAssign((int) // user.getId(), startNodeID)) //
+				 * .nsf表示的是这个URL链接到DOMINO服务器中去！ isAssignFun = true; } strURL =
+				 * function.getUrl() + (function.getUrl().indexOf("?") > 0 ? "&" :
+				 * "?") + "MODULEID=" + function.getModuleId() + "&flowIDs=" +
+				 * strFlowIDs + "&userID=" + user.getId();
+				 */
+			} else {
+				strURL = function.getUrl();
+				isAssignFun = true;
+			}
+			isAssignFun = true;
+			strURL = StrUtil.replace(strURL, "#webproject#", projectName);
+
+			/* 处理菜单 */
+			if (isAssignFun) {
+				try {
+					ArrayList serverList = CityManager.getGDCity(cityID)
+							.getServerList();
+					String serverType, serverName;
+					// System.out.println(serverList);
+					ServerConfig server;
+					for (int i = 0; i < serverList.size(); i++) {
+						server = (ServerConfig) serverList.get(i);
+						serverType = server.getServerType().toLowerCase();
+						serverName = server.getDomName();
+						// System.out.println("serer type:" + serverType);
+						// System.out.println(strURL);
+						if (strURL.indexOf("#" + serverType + "#") >= 0) {
+							strURL = StrUtil.replace(strURL, "#" + serverType
+									+ "#", serverName);
+							break;
+						}
+					}
+				} catch (Exception ex) {
+					System.out.print(ex);
+				}
+
+				// 判断是否在新窗口打开
+				strTarget = function.isNewWindow() ? " target=\"_blank\""
+						: " target=\"main\"";
+
+				if (function.getLayer() - realLay == 1) {
+					strURLName = "<strong><img border=\"0\" src=\"images/ico1.gif\">&nbsp;"
+							+ strURLName + "</strong>";
+					strMenu.append(preString);
+				} else {
+					strMenu.append("&nbsp;&nbsp;&nbsp;" + preString);
+				}
+				strURLName = "<span id='menu" + function.getId()
+						+ "' height=18>" + strURLName + "</span>";
+				strMenu.append("<a href=\"" + strURL + "\"" + strTarget
+						+ " onclick=\"javascript:changeColor('menu"
+						+ function.getId() + "')\">" + strURLName
+						+ "</a><br>\n");
+			}
+		}
+		return strMenu.toString();
+	}
+
+	/**
+	 * 省实业横向三层下拉菜单 返回菜单数组 add by wxy 2006-08-04 *
+	 * 
+	 */
+
+	public static ArrayList getMenuList(Function function, User user,
+			int cityID, boolean isRoot, int realLay, ArrayList Menulist,
+			long parentId) {
+		String projectName = Globals.getProperty("server.web_project");
+		Role role;
+		try {
+			role = RoleManager.getRole(user.getRoleID());
+
+			String strURL = ""; /* 菜单链接 */
+			String tmp[] = null;
+			tmp = new String[6];
+			Iterator tmpIterFunction; /* 临时功能列表，用于递归 */
+			Function tmpFunction; /* 临时功能对象，用于表示功能 */
+
+			if (function.isHasChild()) /* 对拥有子菜单的菜单进行处理 */{
+				tmp[0] = function.getLayer() + ""; // 当前层
+				tmp[1] = function.getName().toString(); // 节点名
+				tmp[2] = function.getId() + ""; // 节点ID
+				tmp[3] = ""; // 链接URL
+				tmp[4] = function.isNewWindow() + ""; // 是否有新窗口
+				tmp[5] = parentId + ""; // 父节点ID
+
+				Menulist.add(tmp);
+				role = RoleManager.getRole(user.getRoleID());
+
+				tmpIterFunction = RoleFunctionManager.getRoleChildFunction(
+						function, role, user.getId());
+				while (tmpIterFunction.hasNext()) {
+					tmpFunction = (Function) tmpIterFunction.next();
+
+					// 把构造好的功能菜单字符串加入到菜单字符缓冲流中，并递归
+					Menulist = getMenuList(tmpFunction, user, cityID, false,
+							realLay, Menulist, function.getId());
+
+				}
+			} else {/* 对没有子菜单的菜单进行处理 */
+				boolean isAssignFun = false;
+				String strFlowIDs = "";
+				// FlowConfig flow = null;
+				if (function.getModuleId() != 0) {
+					/*
+					 * Iterator iterFlow =
+					 * FlowConfigManager.getFlowByModuleID(function.getModuleId());
+					 * while (iterFlow.hasNext()) { flow = (FlowConfig)
+					 * iterFlow.next(); if (strFlowIDs.equals("")) strFlowIDs =
+					 * Integer.toString(flow.getFlowID()); else strFlowIDs =
+					 * strFlowIDs + "," + Integer.toString(flow.getFlowID());
+					 * isAssignFun = true; } strURL = function.getUrl() +
+					 * (function.getUrl().indexOf("?") > 0 ? "&" : "?") +
+					 * "MODULEID=" + function.getModuleId() + "&flowIDs=" +
+					 * strFlowIDs + "&userID=" + user.getId();
+					 */
+				} else {
+					strURL = function.getUrl();
+					isAssignFun = true;
+				}
+				isAssignFun = true;
+				strURL = StrUtil.replace(strURL, "#webproject#", projectName);
+
+				/* 处理菜单 */
+				if (isAssignFun) {
+					try {
+						ArrayList serverList = CityManager.getGDCity(cityID)
+								.getServerList();
+						String serverType, serverName;
+						ServerConfig server;
+						for (int i = 0; i < serverList.size(); i++) {
+							server = (ServerConfig) serverList.get(i);
+							serverType = server.getServerType().toLowerCase();
+							serverName = server.getDomName();
+							if (strURL.indexOf("#" + serverType + "#") >= 0) {
+								strURL = StrUtil.replace(strURL, "#"
+										+ serverType + "#", serverName);
+								break;
+							}
+						}
+					} catch (Exception ex) {
+						System.out.print(ex);
+					}
+				}
+				tmp[0] = function.getLayer() + ""; // 当前层
+				tmp[1] = function.getName().toString(); // 节点名
+				tmp[2] = function.getId() + ""; // 节点ID
+				tmp[3] = strURL; // 链接URL
+				tmp[4] = function.isNewWindow() + ""; // 是否有新窗口
+				tmp[5] = parentId + ""; // 父节点ID
+
+				Menulist.add(tmp);
+			}
+
+		} catch (ApplicationException e) {
+			e.printStackTrace();
+		}
+		return Menulist;
+	}
+
+	/**
+	 * 2006-06-23 向海涛用于生成xml菜单时，菜单的html代码对应唯一的id
+	 */
+	private static int xmlID = 0;
+
+	/**
+	 * <p>
+	 * 功能说明:取远端的xml文件，形成菜单
+	 * </p>
+	 * 
+	 * @param xmlUrl
+	 * @param app
+	 *            特定应用的代码，唯一
+	 * @return html string
+	 * @作者 向海涛
+	 * @日期 2006-5-18
+	 */
+	public static String getXmlMenu(String xmlUrl, String app) {
+		String strMenu = "";
+		URL url = null;
+		InputStream io = null;
+		SAXBuilder builder = null;
+		Document doc = null;
+		try {
+			// 取远端的xml
+			builder = new SAXBuilder();
+			url = new URL(xmlUrl);
+			io = url.openStream();
+			doc = builder.build(io);
+			Element root = doc.getRootElement();
+			// 取第一级菜单项
+			List list = root.getChildren();
+			xmlID = 0;
+			strMenu = getXmlSubMenu(list, 1, app).toString();
+		} catch (JDOMParseException e) {
+			e.printStackTrace();
+		} catch (JDOMException je) {
+			je.printStackTrace();
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			doc = null;
+			if (io != null) {
+				try {
+					io.close();
+				} catch (IOException e) {
+				}
+
+			}
+			io = null;
+			builder = null;
+			url = null;
+		}
+		return strMenu;
+	}
+
+	/**
+	 * 
+	 * <p>
+	 * 功能说明:根据xml的node列表，生成子菜单
+	 * </p>
+	 * 
+	 * @param list
+	 *            菜单项
+	 * @param layer
+	 *            菜单层级
+	 * @param app
+	 *            特定应用的代码，唯一
+	 * @return
+	 * @作者 向海涛
+	 * @日期 2006-5-18
+	 */
+	private static StringBuffer getXmlSubMenu(List list, int layer, String app) {
+		StringBuffer strMenu = new StringBuffer();
+		try {
+			for (int i = 0; i < list.size(); i++) {
+				xmlID++; // 菜单ID号不同
+				Element submenu = (Element) list.get(i);
+				String title = submenu.getChildTextTrim("title");
+				List subList = submenu.getChildren("submenu");
+
+				// 菜单表现，设定锚点，锚点名
+				String tagID = app + "_" + xmlID;
+
+				int space = layer * 3; // 空格数
+
+				if (subList.size() > 0) { // 有子菜单
+					strMenu.append("<a name=\"" + tagID + "\"></a>");
+					// 设置空格
+					for (int j = 0; j < space; j++) {
+						strMenu.append("&nbsp;");
+					}
+
+					// 设置菜单主项
+					strMenu.append("<a href=\"#" + tagID
+							+ "\" onclick=\"javascript:ShowOrHide('" + tagID
+							+ "'," + (layer - 1) + ")\">");
+					strMenu.append("<span id=\"menu" + tagID
+							+ "\" height=\"18\">");
+
+					if (layer == 1) { // 顶级菜单要加粗,使用不同的图片
+						strMenu.append("<strong><img name=\"img" + tagID
+								+ "\" border=\"0\" src=\"images/ico1.gif\">");
+						strMenu.append("&nbsp;" + title + "</strong>");
+					} else {
+						strMenu.append("<img name=\"img" + tagID
+								+ "\" border=\"0\" src=\"images/ico2.gif\">");
+						strMenu.append("&nbsp;" + title);
+					}
+					strMenu.append("</span></a><br>\n");
+
+					// 设置子菜单项
+					strMenu.append("<div class=\"clsMenu\" id=\"sFunction"
+							+ tagID + "\">\n");
+					strMenu.append(getXmlSubMenu(subList, layer + 1, app));
+					strMenu.append("</div>\n");
+				} else {
+					// 设置空格
+					for (int j = 0; j < space; j++) {
+						strMenu.append("&nbsp;");
+					}
+					String url = submenu.getChildTextTrim("url");
+					String openWindow = submenu.getChildTextTrim("openWindow");
+
+					// 设置菜单链接
+					strMenu.append("<a href=\"" + url + "\" " + "target=\""
+							+ (openWindow.equals("1") ? "_blank" : "main")
+							+ "\" ");
+					strMenu.append(" onclick=\"javascript:changeColor('menu"
+							+ tagID + "')\">");
+					strMenu.append("<span id=\"menu" + tagID
+							+ "\" height=\"18\">");
+
+					if (layer == 1) { // 顶级菜单要加粗,使用图片
+						strMenu.append("<strong><img name=\"img" + tagID
+								+ "\" border=\"0\" src=\"images/ico1.gif\">");
+						strMenu.append("&nbsp;" + title + "</strong>");
+					} else {
+						strMenu.append("&nbsp;" + title);
+					}
+					strMenu.append("</span></a><br>\n");
+				}
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		return strMenu;
+	}
+
+	public static String showGroupList(long groupId, long selectGroupId,
+			int layer) {
+		StringBuffer buf = new StringBuffer();
+		Iterator iter = GroupManager.getChildNoDel(groupId);
+		Group childGroup = null;
+
+		while (iter.hasNext()) {
+			childGroup = (Group) iter.next();
+
+			if (selectGroupId == childGroup.getId()) {
+				buf.append("<option value='").append(childGroup.getId())
+						.append("' SELECTED>");
+			} else {
+				buf.append("<option value='").append(childGroup.getId())
+						.append("'>");
+			}
+
+			for (int i = 0; i < layer; i++) {
+				buf.append("&nbsp;&nbsp;&nbsp;");
+			}
+
+			buf.append("&#149;").append(childGroup.getName());
+			// if(selectGroupId==childGroup.getId())
+			// buf.append("(当前)");
+			buf.append("</option>");
+			buf.append(showGroupList(childGroup.getId(), selectGroupId,
+					layer + 1));
+		}
+
+		return buf.toString();
+	}
+
+	/**
+	 * 按照部门层级以及挂靠关系，取得从祖先到当前组织的路径，不包括软删除的数据。
+	 * 
+	 * @param ancestorGroupID
+	 *            祖先的id
+	 * @param childGroupID
+	 *            当前的组织ID
+	 * @return 从祖先到当前组织的路径。
+	 * @see Iterator
+	 */
+	public static Iterator getLinkedGroupLayerPath(long rootGroupID,
+			long selectedGroupID) {
+		ArrayList path = new ArrayList();
+		Group group = GroupManager.getGroupByID(selectedGroupID);
+		if (group == null)
+			return path.iterator();
+		path.add(group);
+		while (rootGroupID != group.getId()) {
+			if (group.getLinkGroupId() <= 0) {
+				group = GroupManager.getParent(group);
+			} else {
+				group = GroupManager.getGroupByID(group.getLinkGroupId());
+			}
+			if (group != null && group.isUse()) {
+				path.add(0, group);
+			} else {
+				break;
+			}
+		}
+		return path.iterator();
+	}
+
+	/**
+	 * 按照新样式构建树形菜单
+	 * 
+	 * @param function
+	 * @param user
+	 * @param cityID
+	 * @param isRoot
+	 * @param realLay
+	 * @param userId
+	 * @return
+	 * @throws ApplicationException
+	 *             add by hjt 2007-3-29
+	 */
+	public static String showMenuNewStyle(Function function, User user,
+			int cityID, boolean isRoot, int realLay, long userId)
+			throws ApplicationException {
+		int layer = function.getLayer();
+		logger.debug(" Functoin:" + function + " User:ID=" + user.getId()
+				+ "UserName: " + user.getName() + "CityID:" + cityID);
+
+		String projectName = Globals.getProperty("server.web_project");
+		Role role = RoleManager.getRole(user.getRoleID());
+		StringBuffer strMenu = new StringBuffer();
+		String prefix; /* 菜单前缀 */
+		String strURL = ""; /* 菜单链接 */
+		String strURLName = ""; /* 菜单URL显示的名称 */
+		String strTarget = ""; /* 菜单是否打开新窗口 */
+		String check = "0"; /* 是否第一层菜单 0--第一层 1--非第一层 */
+		Iterator tmpIterFunction; /* 临时功能列表，用于递归 */
+		Function tmpFunction; /* 临时功能对象，用于表示功能 */
+
+		strURLName = function.getName();
+
+		if (function.isHasChild()) /* 对拥有子菜单的菜单进行处理 */{
+			if (!isRoot) {
+				// 设置第一层菜单名称显示，第一层加<Strong>显示，并指定图片
+				if (function.getLayer() - realLay == 1) {
+					strMenu.append("menu.add(" + function.getId() + "," + 0
+							+ ",'" + function.getName() + "','"
+							+ function.getUrl() + "','" + function.getName()
+							+ "','main');\n");
+				} else {
+					strMenu.append("menu.add(" + function.getId() + ","
+							+ function.getParentID() + ",'"
+							+ function.getName() + "','" + function.getUrl()
+							+ "','" + function.getName() + "','main');\n");
+				}
+			} else {
+				strMenu
+						.append("menu.add("
+								+ 0
+								+ ","
+								+ -1
+								+ ",'系统控制台','javascript:menu.closeAll();','点击关闭所有菜单');\n");
+			}
+			tmpIterFunction = RoleFunctionManager.getRoleChildFunction(
+					function, role, userId);
+			while (tmpIterFunction.hasNext()) {
+				tmpFunction = (Function) tmpIterFunction.next();
+				strMenu.append(showMenuNewStyle(tmpFunction, user, cityID,
+						false, realLay, userId));
+			}
+		} else {/* 对没有子菜单的菜单进行处理 */
+			boolean isAssignFun = false;
+			String strFlowIDs = "";
+			// FlowConfig flow = null;
+			int startNodeID = 0;
+			if (function.getModuleId() != 0) {
+				/*
+				 * Iterator iterFlow =
+				 * FlowConfigManager.getFlowByModuleID(function.getModuleId());
+				 * while (iterFlow.hasNext()){ flow = (FlowConfig)
+				 * iterFlow.next(); if (strFlowIDs.equals("")) strFlowIDs =
+				 * Integer.toString(flow.getFlowID()); else strFlowIDs =
+				 * strFlowIDs + "," + Integer.toString(flow.getFlowID());
+				 * startNodeID = flow.getStartNode(); isAssignFun = true; }
+				 * strURL = function.getUrl() + (function.getUrl().indexOf("?") >
+				 * 0 ? "&" : "?") + "MODULEID=" + function.getModuleId() +
+				 * "&flowIDs=" + strFlowIDs + "&userID=" + user.getId();
+				 */
+			} else {
+				strURL = function.getUrl();
+				isAssignFun = true;
+			}
+			isAssignFun = true;
+			strURL = StrUtil.replace(strURL, "#webproject#", projectName);
+
+			/* 处理菜单 */
+			if (isAssignFun) {
+				logger.info("处理菜单...,URL:" + strURL);
+				// try{
+				// ArrayList serverList =
+				// GDCityServerManager.getGDCity(cityID).getServerList();
+				// String serverType, serverName;
+				// ServerConfig server;
+				// for (int i = 0; i < serverList.size(); i++){
+				// server = (ServerConfig) serverList.get(i);
+				// serverType = server.getServerType().toLowerCase();
+				// serverName = server.getDomName();
+				// if (strURL.indexOf("#" + serverType + "#") >= 0){
+				// strURL = StrUtil.replace(strURL, "#" + serverType + "#",
+				// serverName);
+				// break;
+				// }
+				// }
+				// } catch (Exception ex){
+				// ex.printStackTrace();
+				// }
+
+				// 判断是否在新窗口打开
+				strTarget = function.isNewWindow() ? "_blank" : "main";
+				if (!("退出系统".equals(function.getName()) || "退出".equals(function
+						.getName()))) {
+					if (function.getLayer() - realLay == 1) {
+						strMenu.append("menu.add(" + function.getId() + "," + 0
+								+ ",'" + function.getName() + "','" + strURL
+								+ "','" + function.getName() + "','"
+								+ strTarget + "');\n");
+					} else {
+						strMenu.append("menu.add(" + function.getId() + ","
+								+ function.getParentID() + ",'"
+								+ function.getName() + "','" + strURL + "','"
+								+ function.getName() + "','" + strTarget
+								+ "');\n");
+					}
+				}
+			}
+		}
+
+		logger.debug("Menu:" + strMenu.toString());
+		return strMenu.toString();
+	}
+
+	/**
+	 * 按照新样式构建树形菜单,只显示所有文档,文档查询,档案管理,已阅文档
+	 * 
+	 * @param function
+	 * @param user
+	 * @param cityID
+	 * @param isRoot
+	 * @param realLay
+	 * @param userId
+	 * @return
+	 * @throws ApplicationException
+	 *             add by lhw 2007-11-12
+	 */
+	public static String showMenuCheckStyle(Function function, User user,
+			int cityID, boolean isRoot, int realLay, long userId)
+			throws ApplicationException {
+		String projectName = Globals.getProperty("server.web_project");
+		Role role = RoleManager.getRole(user.getRoleID());
+		StringBuffer strMenu = new StringBuffer();
+		String strURL = ""; /* 菜单链接 */
+		String strTarget = ""; /* 菜单是否打开新窗口 */
+		Iterator tmpIterFunction; /* 临时功能列表，用于递归 */
+		Function tmpFunction; /* 临时功能对象，用于表示功能 */
+
+		if (function.isHasChild()) /* 对拥有子菜单的菜单进行处理 */{
+			if (!isRoot) {
+				// 设置第一层菜单名称显示，第一层加<Strong>显示，并指定图片
+				if (function.getLayer() - realLay == 1) {
+					if (function.getName().equals("所有文档")
+							|| function.getName().equals("文档查询")
+							|| function.getName().equals("档案管理")
+							|| function.getName().equals("已阅文档")) {
+						strMenu.append("menu.add(" + function.getId() + "," + 0
+								+ ",'" + function.getName() + "','"
+								+ function.getUrl() + "','"
+								+ function.getName() + "','main');\n");
+					}
+				} else {
+					strMenu.append("menu.add(" + function.getId() + ","
+							+ function.getParentID() + ",'"
+							+ function.getName() + "','" + function.getUrl()
+							+ "','" + function.getName() + "','main');\n");
+				}
+			} else {
+				strMenu
+						.append("menu.add("
+								+ 0
+								+ ","
+								+ -1
+								+ ",'系统控制台','javascript:menu.closeAll();','点击关闭所有菜单');\n");
+			}
+			tmpIterFunction = RoleFunctionManager.getRoleChildFunction(
+					function, role, userId);
+			while (tmpIterFunction.hasNext()) {
+				tmpFunction = (Function) tmpIterFunction.next();
+				strMenu.append(showMenuCheckStyle(tmpFunction, user, cityID,
+						false, realLay, userId));
+			}
+		} else {/* 对没有子菜单的菜单进行处理 */
+			if (function.getLayer() - realLay != 1) {
+				boolean isAssignFun = false;
+				String strFlowIDs = "";
+				// FlowConfig flow = null;
+				if (function.getModuleId() != 0) {
+					/*
+					 * Iterator iterFlow =
+					 * FlowConfigManager.getFlowByModuleID(function.getModuleId());
+					 * while (iterFlow.hasNext()){ flow = (FlowConfig)
+					 * iterFlow.next(); if (strFlowIDs.equals("")) strFlowIDs =
+					 * Integer.toString(flow.getFlowID()); else strFlowIDs =
+					 * strFlowIDs + "," + Integer.toString(flow.getFlowID());
+					 * isAssignFun = true; } strURL = function.getUrl() +
+					 * (function.getUrl().indexOf("?") > 0 ? "&" : "?") +
+					 * "MODULEID=" + function.getModuleId() + "&flowIDs=" +
+					 * strFlowIDs + "&userID=" + user.getId();
+					 */
+				} else {
+					strURL = function.getUrl();
+					isAssignFun = true;
+				}
+				isAssignFun = true;
+				strURL = StrUtil.replace(strURL, "#webproject#", projectName);
+
+				/* 处理菜单 */
+				if (isAssignFun) {
+					try {
+						ArrayList serverList = CityManager.getGDCity(cityID)
+								.getServerList();
+						String serverType, serverName;
+						ServerConfig server;
+						for (int i = 0; i < serverList.size(); i++) {
+							server = (ServerConfig) serverList.get(i);
+							serverType = server.getServerType().toLowerCase();
+							serverName = server.getDomName();
+							if (strURL.indexOf("#" + serverType + "#") >= 0) {
+								strURL = StrUtil.replace(strURL, "#"
+										+ serverType + "#", serverName);
+								break;
+							}
+						}
+					} catch (Exception ex) {
+					}
+
+					// 判断是否在新窗口打开
+					strTarget = function.isNewWindow() ? "_blank" : "main";
+					if (!(function.getName().equals("退出系统") || function
+							.getName().equals("退出"))) {
+						if (function.getLayer() - realLay == 1) {
+							strMenu.append("menu.add(" + function.getId() + ","
+									+ 0 + ",'" + function.getName() + "','"
+									+ strURL + "','" + function.getName()
+									+ "','" + strTarget + "');\n");
+						} else {
+							strMenu.append("menu.add(" + function.getId() + ","
+									+ function.getParentID() + ",'"
+									+ function.getName() + "','" + strURL
+									+ "','" + function.getName() + "','"
+									+ strTarget + "');\n");
+						}
+					}
+				}
+			} else {
+				if (function.getName().equals("所有文档")
+						|| function.getName().equals("文档查询")
+						|| function.getName().equals("档案管理")
+						|| function.getName().equals("已阅文档")) {
+					boolean isAssignFun = false;
+					String strFlowIDs = "";
+					// FlowConfig flow = null;
+					if (function.getModuleId() != 0) {
+						/*
+						 * Iterator iterFlow =
+						 * FlowConfigManager.getFlowByModuleID(function.getModuleId());
+						 * while (iterFlow.hasNext()){ flow = (FlowConfig)
+						 * iterFlow.next(); if (strFlowIDs.equals(""))
+						 * strFlowIDs = Integer.toString(flow.getFlowID()); else
+						 * strFlowIDs = strFlowIDs + "," +
+						 * Integer.toString(flow.getFlowID()); isAssignFun =
+						 * true; } strURL = function.getUrl() +
+						 * (function.getUrl().indexOf("?") > 0 ? "&" : "?") +
+						 * "MODULEID=" + function.getModuleId() + "&flowIDs=" +
+						 * strFlowIDs + "&userID=" + user.getId();
+						 */
+					} else {
+						strURL = function.getUrl();
+						isAssignFun = true;
+					}
+					isAssignFun = true;
+					strURL = StrUtil.replace(strURL, "#webproject#",
+							projectName);
+
+					/* 处理菜单 */
+					if (isAssignFun) {
+						try {
+							ArrayList serverList = CityManager
+									.getGDCity(cityID).getServerList();
+							String serverType, serverName;
+							ServerConfig server;
+							for (int i = 0; i < serverList.size(); i++) {
+								server = (ServerConfig) serverList.get(i);
+								serverType = server.getServerType()
+										.toLowerCase();
+								serverName = server.getDomName();
+								if (strURL.indexOf("#" + serverType + "#") >= 0) {
+									strURL = StrUtil.replace(strURL, "#"
+											+ serverType + "#", serverName);
+									break;
+								}
+							}
+						} catch (Exception ex) {
+							ex.printStackTrace();
+						}
+
+						// 判断是否在新窗口打开
+						strTarget = function.isNewWindow() ? "_blank" : "main";
+						if (!(function.getName().equals("退出系统") || function
+								.getName().equals("退出"))) {
+							if (function.getLayer() - realLay == 1) {
+								strMenu.append("menu.add(" + function.getId()
+										+ "," + 0 + ",'" + function.getName()
+										+ "','" + strURL + "','"
+										+ function.getName() + "','"
+										+ strTarget + "');\n");
+							} else {
+								strMenu.append("menu.add(" + function.getId()
+										+ "," + function.getParentID() + ",'"
+										+ function.getName() + "','" + strURL
+										+ "','" + function.getName() + "','"
+										+ strTarget + "');\n");
+							}
+						}
+					}
+
+				}
+			}
+
+		}
+		return strMenu.toString();
+	}
+
+	/**
+	 * 传入当前用户对象，查找他拥有的角色，通过角色查找在这个角色下所有的功能/菜单列表，<br>
+	 * 然后根据菜单的层次关系，组合显示方式。 <br>
+	 * 1.根据用户对象，获取当前登录用户的角色列表<br>
+	 * 2.查找每个角色列表的功能/菜单列表<br>
+	 * 3.组合显示格式，往菜单里增加的格式如下：<br>
+	 * ------------------------------------------------<br>
+	 * menu.add(根菜单编号,<br>
+	 * 第一层顶级菜单编号，值为：-1即可,<br>
+	 * 菜单名称：'系统控制台',<br>
+	 * 菜单命令链接：'javascript:menu.closeAll();',<br>
+	 * 提示信息：'点击关闭所有菜单');<br>
+	 * --------------------------------------------------<br>
+	 * 例子如下：<br>
+	 * menu.add(0,-1,'系统控制台','javascript:menu.closeAll();','点击关闭所有菜单');<br>
+	 * menu.add(1,0,'控制台 ','','控制台 ','main');<br>
+	 * menu.add(5,1,'主页','main.jsp','主页','main');<br>
+	 * menu.add(180,1,'个人事务','','个人事务','main');<br>
+	 * menu.add(2,1,'系统管理','','系统管理','main');<br>
+	 * menu.add(308,1,'测试菜单','XXXXww','测试菜单','main');<br>
+	 * menu.add(309,1,'Testing Menu','xxxx&nbsp;','Testing Menu','main');<br>
+	 * menu.add(112,2,'系统配置','null','系统配置','main');<br>
+	 * menu.add(21,2,'后台管理','','后台管理','main');<br>
+	 * menu.add(27,21,'缓存设置','../../admin/cache/cache.jsp','缓存设置','main');<br>
+	 * menu.add(24,21,'运行日志','../../admin/logviewer.jsp','运行日志','main');<br>
+	 * menu.add(26,21,'在线用户','../../admin/online.jsp','在线用户','main');<br>
+	 * menu.add(22,21,'操作日志','../../admin/logstat.jsp','操作日志','main');<br>
+	 * menu.add(25,21,'登录日志','../../admin/syslog.jsp','登录日志','main');<br>
+	 * menu.add(23,21,'应用数据','../../admin/userData.jsp','应用数据','main');<br>
+	 * menu.add(116,112,'单位管理','../../admin/groups.jsp','单位管理','main');<br>
+	 * menu.add(119,112,'用户管理','../../admin/users.jsp','用户管理','main');<br>
+	 * menu.add(118,112,'岗位管理','../../admin/position.jsp','岗位管理','main');<br>
+	 * menu.add(117,112,'菜单管理','../../admin/functions.jsp','菜单管理','main');<br>
+	 * menu.add(120,112,'菜单权限','../../admin/roles.jsp','菜单权限','main');<br>
+	 * menu.add(113,112,'节日配置','../../admin/holiday.jsp','节日配置','main');<br>
+	 * menu.add(114,112,'服务器配置','../../admin/serverConfig.jsp','服务器配置','main');<br>
+	 * menu.add(314,112,'菜单权限(新)','../../admin/newmenu.jsp','菜单权限(新)','main');<br>
+	 * menu.add(122,116,'用户管理','null','用户管理','main');<br>
+	 * menu.add(181,180,'修改个人资料','../../admin/editMyself.jsp','修改个人资料','main');<br>
+	 * menu.add(310,308,'test2111','222','test2111','main');<br>
+	 * 
+	 * @param user
+	 * @return
+	 * @throws ApplicationException
+	 */
+	public static String showMenuStyleByUser(User user)
+			throws ApplicationException {
+		/*
+		 * 1.根据用户对象，获取当前登录用户的角色列表 2.查找每个角色列表的功能/菜单列表 3.组合显示格式，往菜单里增加的格式如下：
+		 * 
+		 */
+		logger.debug("Starting constucting left menu..");
+		MenuContainer lists = FunctionManager.getAllParents();
+		logger.debug("Finishing getting menu from DB.");
+
+		LinkedList parentmenu = lists.getParentMenu();
+
+		StringBuffer strMenu = new StringBuffer();
+		// strMenu.append("menu.add(" + 0 + "," + -1 +
+		// ",'系统控制台','javascript:menu.closeAll();','点击关闭所有菜单');\n");
+
+		for (int j = 0; j < parentmenu.size(); j++) {
+			MenuFunction p = (MenuFunction) parentmenu.get(j);
+			String keyvalue = p.getParentID() + "";
+			LinkedList map = (LinkedList) lists.get(keyvalue);
+			long index = 0;
+			for (int i = 0; i < map.size(); i++) {
+				MenuFunction function = (MenuFunction) map.get(i);
+				if (function != null) {
+					if (function.getLayer() == 0) {
+						index = -1;
+						strMenu.append("menu.add(" + 0 + "," + index + ",'"
+								+ function.getName() + "','"
+								+ function.getUrl() + "','"
+								+ function.getName() + "');\n");
+					} else if (function.getLayer() == 1)
+						index = 0;
+					else
+						index = function.getParentID();
+					if (!"退出".equalsIgnoreCase(function.getName())
+							&& function.getLayer() != 0)
+						strMenu.append("menu.add(" + function.getFunID() + ","
+								+ index + ",'" + function.getName() + "','"
+								+ function.getUrl() + "','"
+								+ function.getName() + "','main');\n");
+				}
+			}
+		}
+
+		// String projectName = Globals.getProperty("server.web_project");
+
+		logger.debug("Menu:" + strMenu.toString());
+		return strMenu.toString();
+	}
+
+	/**
+	 * 获取城市列表
+	 * 
+	 * @param isAll
+	 * @param selectedcityid
+	 * @param i
+	 * @return
+	 */
+	public static String cityList(boolean isAll, int selectedcityid, int i) {
+		StringBuffer sbuf = new StringBuffer();
+		Iterator<City> iter = CityManager.getAllByReload();
+		City city = null;
+		while (iter.hasNext()) {
+			city = (City) iter.next();
+			if (city.getVisible() == 1 && !isAll)
+				continue;
+			if (selectedcityid == city.getCityID())
+				sbuf.append("<option value='" + city.getCityID()
+						+ "' selected>");
+			else
+				sbuf.append("<option value='" + city.getCityID() + "'>");
+			sbuf.append("&#149;" + city.getChName());
+			sbuf.append("</option>");
+		}
+		return sbuf.toString();
+	}
+
+	public static String cityList(boolean isAll, int selected) {
+		StringBuffer sbuf = new StringBuffer();
+		Iterator iter = CityManager.getAllByReload();
+		City city = null;
+		while (iter.hasNext()) {
+			city = (City) iter.next();
+			if (city.getVisible() == 1 && !isAll)
+				continue;
+			if (city.getCityID() == selected)
+				sbuf.append("<option value='" + city.getCityID()
+						+ "'  selected>");
+			else
+				sbuf.append("<option value='" + city.getCityID() + "' >");
+			sbuf.append("&#149;" + city.getChName());
+			sbuf.append("</option>");
+		}
+		return sbuf.toString();
+	}
+
+}
